@@ -1,4 +1,4 @@
-export { UseFormOptions, useForm } from './useForm';
+export { useForm } from './useForm';
 export {
   Validator,
   isAtLeast,
@@ -7,6 +7,7 @@ export {
   isNumber,
   isAtMost,
   isLessThan,
+  isRequired,
   mergeValidators,
   pipeValidators,
 } from './validators';

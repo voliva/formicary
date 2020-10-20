@@ -12,14 +12,14 @@ import {
   pipeValidators,
   isNumber,
   isAtMost,
+  isRequired,
 } from '@voliva/react-reactive-form';
 
 const Form = () => {
-  const { register, errors } = useForm({
-    default: {
-      min: 0,
-      max: 10,
-    },
+  const { register, errors } = useForm<{
+    min: number;
+    max: number;
+  }>({
     onSubmit: () => {},
   });
 
@@ -28,13 +28,18 @@ const Form = () => {
       <input
         placeholder="min"
         ref={register({
-          key: 'min',
-          validator: pipeValidators(isNumber, isAtMost('max')),
+          key: v => v.min, // Same as 'min', but typesafe
+          initialValue: 0,
+          validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
         })}
       />
       <input
         placeholder="max"
-        ref={register({ key: 'max', validator: isNumber })}
+        ref={register({
+          key: 'max', // Could also do `v => v.max`
+          initialValue: 10,
+          validator: pipeValidators(isRequired, isNumber),
+        })}
       />
       <div>{Object.keys(errors).join(' ')}</div>
     </div>

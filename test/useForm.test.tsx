@@ -6,11 +6,10 @@ import '@testing-library/jest-dom/extend-expect';
 import { isAtMost } from '../src/validators';
 
 const Form = () => {
-  const { register, errors } = useForm({
-    default: {
-      min: 0,
-      max: 10,
-    },
+  const { register, errors } = useForm<{
+    min: number;
+    max: number;
+  }>({
     onSubmit: () => {},
   });
 
@@ -19,13 +18,18 @@ const Form = () => {
       <input
         placeholder="min"
         ref={register({
-          key: 'min',
+          key: v => v.min,
+          initialValue: 0,
           validator: pipeValidators(isNumber, isAtMost('max')),
         })}
       />
       <input
         placeholder="max"
-        ref={register({ key: 'max', validator: isNumber })}
+        ref={register({
+          key: v => v.max,
+          initialValue: 10,
+          validator: isNumber,
+        })}
       />
       <div data-testid="errors">{Object.keys(errors).join(' ')}</div>
     </div>
@@ -40,28 +44,21 @@ describe('useForm', () => {
     expect(getByPlaceholderText('max')).toHaveValue('10');
   });
 
-  it('validates fields by their own', async () => {
+  it('validates fields by their own', () => {
     const { getByPlaceholderText, getByTestId } = render(<Form />);
 
     expect(getByTestId('errors')).toHaveTextContent('');
-    await act(async () => {
-      // pipeValidators turns validation into an async task, so it triggers async results
-      userEvent.type(getByPlaceholderText('min'), '12');
-    });
+    userEvent.type(getByPlaceholderText('min'), '12');
     expect(getByTestId('errors')).toHaveTextContent('min');
   });
 
-  it('refreshes validation on fields that depend on it', async () => {
+  it('refreshes validation on fields that depend on it', () => {
     const { getByPlaceholderText, getByTestId } = render(<Form />);
 
     expect(getByTestId('errors')).toHaveTextContent('');
-    await act(async () => {
-      userEvent.type(getByPlaceholderText('min'), '12');
-    });
+    userEvent.type(getByPlaceholderText('min'), '12');
     expect(getByTestId('errors')).toHaveTextContent('min');
-    await act(async () => {
-      userEvent.type(getByPlaceholderText('max'), '15');
-    });
+    userEvent.type(getByPlaceholderText('max'), '15');
     expect(getByTestId('errors')).toHaveTextContent('');
   });
 });

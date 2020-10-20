@@ -1,64 +1,44 @@
-import { useEffect, useRef, useState } from 'react';
-import { Validator } from './validators';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BehaviorSubject,
+  concat,
   merge,
   Observable,
   of,
   Subject,
   Subscription,
 } from 'rxjs';
+import { filter, map, mergeMap, scan, skip, switchMap } from 'rxjs/operators';
 import {
-  filter,
-  map,
-  mergeAll,
-  mergeMap,
-  scan,
-  skip,
-  switchMap,
-} from 'rxjs/operators';
+  Control,
+  KeySelector,
+  RegisterControlOptions,
+  RegisterOptions,
+  UseForm,
+  UseFormOptions,
+  UseWatch,
+} from './useForm.types';
 
-type SetPropTypes<O, T> = {
-  [K in keyof O]: T;
-};
-
-export interface UseFormOptions<TValues extends Record<string, any>> {
-  default: TValues;
-  onSubmit: (
-    values: TValues
-  ) => void | Promise<void | {
-    errors: string[];
-    fieldErrors: Partial<SetPropTypes<TValues, string[]>>;
-  }>;
-}
-
-interface Control<T> {
-  setValue: (value: T) => void;
-  setSubscriptor: (cb: (value: T) => void) => void;
-}
-
-export const useForm = <TValues extends Record<string, any>>(
-  options: UseFormOptions<TValues>
-) => {
+export const useForm: UseForm = <TValues>(options: UseFormOptions<TValues>) => {
   const registeredControls = useRef(
     new Map<
       string,
       {
         subject: BehaviorSubject<any>;
-        error$: Observable<boolean | string[]>;
+        error$: Observable<boolean | string[] | 'pending'>;
+        subscriptions: Set<Subscription>;
       }
     >()
   );
 
-  const registerControl = <T = any>({
-    key,
-    validator = () => true,
-  }: {
-    key: string;
-    validator?: Validator<T>;
-  }): Control<T> => {
+  const registerControl = <T>(
+    options: RegisterControlOptions<TValues, T>
+  ): Control<T> => {
+    const key = getKey(options.key);
+    const { initialValue, validator = () => true } = options;
+
     if (!registeredControls.current.has(key)) {
-      const subject = new BehaviorSubject(options.default[key]);
+      const subject = new BehaviorSubject(initialValue);
       const dependency$ = new Subject<BehaviorSubject<any>>();
 
       const error$ = merge(
@@ -78,50 +58,111 @@ export const useForm = <TValues extends Record<string, any>>(
           if (typeof result === 'boolean' || Array.isArray(result)) {
             return of(result);
           }
-          return result;
+          return concat(of('pending' as const), result);
         })
       );
       registeredControls.current.set(key, {
         subject,
         error$,
+        subscriptions: new Set(),
       });
     }
     const control = registeredControls.current.get(key)!;
 
     return {
-      setSubscriptor: cb => control.subject.subscribe(cb),
+      subscribe: cb => {
+        const subscription = control.subject.subscribe(cb);
+        control.subscriptions.add(subscription);
+        return () => {
+          subscription.unsubscribe();
+          control.subscriptions.delete(subscription);
+        };
+      },
       setValue: value => control.subject.next(value),
     };
   };
 
-  const [errors, setErrors] = useState<
-    Partial<SetPropTypes<TValues, string[]>>
-  >({});
+  const { setListener, activateKey } = useAutopruneListeners();
+  const register = <T>(options: RegisterOptions<TValues, T>) => {
+    const {
+      validator,
+      initialValue,
+      eventType = 'input',
+      elementProp = 'value',
+    } = options;
+    const serializer =
+      'serializer' in options ? options.serializer : (v: any) => v;
+    const deserializer =
+      'deserializer' in options ? options.deserializer : (v: any) => v;
+    const key = getKey(options.key);
+    const control = registerControl<T>({
+      key,
+      initialValue,
+      validator,
+    });
+    activateKey(key);
+
+    return (element: HTMLInputElement | null) => {
+      if (!element) {
+        return;
+      }
+
+      setListener(
+        key,
+        element,
+        eventType,
+        evt => control.setValue(deserializer(evt.target[elementProp])),
+        control.subscribe(
+          value => ((element as any)[elementProp] = serializer(value))
+        )
+      );
+    };
+  };
+
+  const [errors, setErrors] = useState<Record<string, 'pending' | string[]>>(
+    {}
+  );
   const activeSubscriptions = useRef(new Map<string, Subscription>());
   useEffect(() => {
     for (let key of registeredControls.current.keys()) {
-      if (!activeSubscriptions.current.has(key)) {
-        activeSubscriptions.current.set(
-          key,
-          registeredControls.current.get(key)!.error$.subscribe(errorResult =>
-            setErrors(errors => {
-              if (key in errors && errorResult === true) {
-                const { [key]: _, ...newErrors } = errors;
-                return newErrors as any;
-              }
-              if (!(key in errors) && errorResult !== true) {
-                const errorValue =
-                  typeof errorResult === 'boolean' ? [] : errorResult;
-                return {
-                  ...errors,
-                  [key]: errorValue,
-                };
-              }
-              return errors;
-            })
-          )
-        );
+      if (activeSubscriptions.current.has(key)) {
+        continue;
       }
+
+      const control = registeredControls.current.get(key)!;
+      const subscription = control.error$.subscribe(errorResult =>
+        setErrors(prevErrors => {
+          switch (errorResult) {
+            case true:
+              if (key in prevErrors) {
+                const { [key]: _, ...newErrors } = prevErrors;
+                return newErrors;
+              }
+              return prevErrors;
+            case 'pending':
+              return {
+                ...prevErrors,
+                [key]: 'pending',
+              };
+          }
+          if (
+            !(key in prevErrors) ||
+            prevErrors[key] === 'pending' ||
+            (typeof errorResult === 'object' &&
+              !arrayEquals(prevErrors[key] as string[], errorResult))
+          ) {
+            const errorValue =
+              typeof errorResult === 'boolean' ? [] : errorResult;
+            return {
+              ...prevErrors,
+              [key]: errorValue,
+            };
+          }
+          return prevErrors;
+        })
+      );
+
+      activeSubscriptions.current.set(key, subscription);
     }
   });
   useEffect(
@@ -133,38 +174,131 @@ export const useForm = <TValues extends Record<string, any>>(
     []
   );
 
-  const { hasListener, createListener, activateKey } = useAutopruneListeners();
-  const register = <T = any>(controlOptions: {
-    key: string;
-    validator?: Validator<T>;
-  }) => {
-    const { key } = controlOptions;
-    activateKey(key);
-    const control = registerControl(controlOptions);
+  const publicErrors = useMemo(() => {
+    const ret: Record<string, string[]> = {};
+    for (let key in errors) {
+      if (errors[key] === 'pending') {
+        continue;
+      }
+      ret[key] = errors[key] as string[];
+    }
+    return ret;
+  }, [errors]);
 
-    return (element: HTMLInputElement | null) => {
-      if (!element) {
+  const isValid = useMemo(() => {
+    const errorValues = Object.values(errors);
+    let hasPending = false;
+    const hasError = errorValues.some(error => {
+      if (error === 'pending') {
+        hasPending = true;
+        return false;
+      }
+      return true;
+    });
+    if (hasError) {
+      return false;
+    }
+    if (hasPending) {
+      return 'pending' as const;
+    }
+    return true;
+  }, [errors]);
+
+  const useWatch: UseWatch<TValues> = <T>(
+    keySelector: KeySelector<TValues, T>,
+    defaultValue?: T
+  ): T => {
+    const [update, setUpdate] = useState(true);
+    const forceUpdate = () => setUpdate(!update);
+    const key = getKey(keySelector);
+    const control = registeredControls.current.get(key);
+
+    useEffect(() => {
+      if (!control) {
         return;
       }
+      const sub = control.subject.subscribe(forceUpdate);
+      return () => sub.unsubscribe();
+    }, [control]);
 
-      // TODO only can do one now :/
-      if (hasListener(key)) {
-        return;
-      }
-
-      createListener(key, element, 'input', evt =>
-        control.setValue(evt.target.value)
-      );
-      control.setSubscriptor(value => (element.value = String(value)));
-    };
+    return control ? control.subject.getValue() : defaultValue;
   };
 
   return {
-    errors,
     registerControl,
     register,
+    errors: publicErrors,
+    isValid,
+    useWatch,
   };
 };
+
+const path = Symbol('path');
+const getKey = (keySelector: KeySelector<any, any>) => {
+  if (typeof keySelector === 'string') return keySelector;
+  const proxy = new Proxy(
+    { path: '' },
+    {
+      get: (target, prop, receiver) => {
+        if (prop === path) {
+          return target.path;
+        }
+        if (typeof prop === 'symbol') {
+          throw new Error(`Can't serialize symbols to keys`);
+        }
+        if (typeof prop === 'number') {
+          target.path = `${target.path}[${prop}]`;
+        } else {
+          target.path = target.path.length ? `${target.path}.${prop}` : prop;
+        }
+        return receiver;
+      },
+    }
+  );
+  const result = keySelector(proxy);
+  if (result !== proxy) {
+    throw new Error(
+      `You must return a value from the argument in the selector function`
+    );
+  }
+  return result[path];
+};
+
+const setProp = (obj: any, prop: string, value: any): void => {
+  if (prop.startsWith('[')) {
+    const end = prop.indexOf(']');
+    const num = Number(prop.substring(1, end));
+    const remaining = prop.substring(end + 2);
+    if (remaining.length) {
+      obj[num] = obj[num] || {};
+      return setProp(obj[num], remaining, value);
+    }
+    obj[num] = value;
+    return;
+  }
+
+  const firstDot = prop.indexOf('.');
+  const firstBracket = prop.indexOf('[');
+  if (firstDot < 0 && firstBracket < 0) {
+    obj[prop] = value;
+    return;
+  }
+
+  if (firstDot > 0 && firstDot < firstBracket) {
+    const property = prop.substring(0, firstDot);
+    const remaining = prop.substring(firstDot + 1);
+    obj[property] = obj[property] || {};
+    return setProp(obj[property], remaining, value);
+  }
+
+  const property = prop.substring(0, firstBracket);
+  const remaining = prop.substring(firstBracket);
+  obj[property] = obj[property] || {};
+  return setProp(obj[property], remaining, value);
+};
+
+const arrayEquals = <T>(a: T[], b: T[]) =>
+  a.length === b.length && a.every((v, i) => b[i] === v);
 
 const empty = Symbol('empty');
 const filterSeenValues = () => <T>(source$: Observable<T>) =>
@@ -194,35 +328,66 @@ const filterSeenValues = () => <T>(source$: Observable<T>) =>
 
 const useAutopruneListeners = () => {
   const attachedListeners = useRef<
-    Record<string, { element: HTMLElement; type: string; listener: any }[]>
-  >({});
-  const lastActiveKeys = useRef<Set<string>>(new Set());
-  lastActiveKeys.current.clear();
+    Map<
+      string,
+      Map<Element, { type: string; listener: any; cleanup: () => void }>
+    >
+  >(new Map());
+  const lastActiveKeys = new Set<string>();
 
   useEffect(() => {
-    const registeredKeys = Object.keys(attachedListeners.current);
-    registeredKeys.forEach(key => {
-      if (!lastActiveKeys.current.has(key)) {
-        attachedListeners.current[key].forEach(({ element, type, listener }) =>
-          element.removeEventListener(type, listener)
-        );
-        delete attachedListeners.current[key];
+    for (let key of attachedListeners.current.keys()) {
+      if (lastActiveKeys.has(key)) {
+        continue;
       }
-    });
+      const keyElements = attachedListeners.current.get(key)!;
+      for (let element of keyElements.keys()) {
+        const { type, listener, cleanup } = keyElements.get(element)!;
+        element.removeEventListener(type, listener);
+        cleanup();
+        keyElements.delete(element);
+      }
+      attachedListeners.current.delete(key);
+    }
   });
 
+  useEffect(
+    () => () => {
+      for (let key of attachedListeners.current.keys()) {
+        const keyElements = attachedListeners.current.get(key)!;
+        for (let element of keyElements.keys()) {
+          const { type, listener, cleanup } = keyElements.get(element)!;
+          element.removeEventListener(type, listener);
+          cleanup();
+          keyElements.delete(element);
+        }
+        attachedListeners.current.delete(key);
+      }
+    },
+    []
+  );
+
   return {
-    activateKey: (key: string) => lastActiveKeys.current.add(key),
-    hasListener: (key: string) => attachedListeners.current[key]?.length > 0,
-    createListener: (
+    activateKey: (key: string) => lastActiveKeys.add(key),
+    setListener: (
       key: string,
       element: HTMLElement,
       type: string,
-      listener: (event: any) => void
+      listener: (event: any) => void,
+      cleanup: () => void
     ) => {
+      if (!attachedListeners.current.has(key)) {
+        attachedListeners.current.set(key, new Map());
+      }
+      const keyElements = attachedListeners.current.get(key)!;
+
+      if (keyElements.has(element)) {
+        const { type, listener, cleanup } = keyElements.get(element)!;
+        element.removeEventListener(type, listener);
+        cleanup();
+      }
       element.addEventListener(type, listener);
-      attachedListeners.current[key] = attachedListeners.current[key] || [];
-      attachedListeners.current[key].push({ element, type, listener });
+      keyElements.set(element, { type, listener, cleanup });
     },
   };
 };

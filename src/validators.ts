@@ -19,6 +19,9 @@ export const isInteger: Validator<any> = value => {
   return true;
 };
 
+export const isRequired: Validator<any> = value =>
+  value != null && value !== '' ? true : ['required'];
+
 const parseNumericParam = (
   value: string | ValidatorParam<number>,
   getValue: (key: string) => any
@@ -69,28 +72,54 @@ export const isLessThan = (
   return true;
 };
 
-export const pipeValidators = (
-  ...validators: Array<Validator<any>>
-): Validator<any> => async (value, getValue) => {
-  for (const validate of validators) {
-    const result = await validate(value, getValue);
+const recPipeValidators = (
+  validators: Array<Validator<any>>,
+  i: number
+): Validator<any> => (value, getValue) => {
+  if (i >= validators.length) {
+    return true;
+  }
+  const syncResult = validators[i](value, getValue);
+
+  const processResult = (result: boolean | string[]) => {
     if (result !== true) {
       return result;
     }
+    return recPipeValidators(validators, i + 1)(value, getValue);
+  };
+
+  if (validationResultIsAsync(syncResult)) {
+    return syncResult.then(processResult);
   }
-  return true;
+  return processResult(syncResult);
 };
+
+export const pipeValidators = (
+  ...validators: Array<Validator<any>>
+): Validator<any> => recPipeValidators(validators, 0);
 
 export const mergeValidators = (
   ...validators: Array<Validator<any>>
-): Validator<any> => async (value, getValue) => {
-  const promises = validators.map(validate => validate(value, getValue));
-  const results = await Promise.all(promises);
-  const flattenedResults = results.flatMap(result =>
-    typeof result === 'boolean' ? [] : result
-  );
-  if (flattenedResults.length === 0) {
-    return !results.some(result => result === false);
+): Validator<any> => (value, getValue) => {
+  const syncResults = validators.map(validate => validate(value, getValue));
+
+  const processResult = (results: (boolean | string[])[]) => {
+    const flattenedResults = results.flatMap(result =>
+      typeof result === 'boolean' ? [] : result
+    );
+    if (flattenedResults.length === 0) {
+      return !results.some(result => result === false);
+    }
+    return flattenedResults;
+  };
+
+  if (syncResults.some(validationResultIsAsync)) {
+    return Promise.all(syncResults).then(processResult);
   }
-  return flattenedResults;
+  return processResult(syncResults as any);
 };
+
+const validationResultIsAsync = (
+  result: ReturnType<Validator<any>>
+): result is Promise<any> =>
+  typeof result === 'object' && !Array.isArray(result);
