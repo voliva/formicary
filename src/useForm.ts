@@ -211,21 +211,21 @@ export const useForm: UseForm = <TValues>(options: UseFormOptions<TValues>) => {
   const useWatch: UseWatch<TValues> = <T>(
     keySelector: KeySelector<TValues, T>,
     defaultValue?: T
-  ): T => {
-    const [update, setUpdate] = useState(true);
-    const forceUpdate = () => setUpdate(!update);
+  ): T | undefined => {
+    const [value, setValue] = useState<T | typeof empty>(empty);
     const key = getKey(keySelector);
-    const control = registeredControls.current.get(key);
 
     useEffect(() => {
+      const control = registeredControls.current.get(key);
       if (!control) {
         return;
       }
-      const sub = control.subject.subscribe(forceUpdate);
-      return () => sub.unsubscribe();
-    }, [control]);
 
-    return control ? control.subject.getValue() : defaultValue;
+      const sub = control.subject.subscribe(setValue);
+      return () => sub.unsubscribe();
+    }, [key]);
+
+    return value !== empty ? (value as T) : defaultValue;
   };
 
   const onSubmit = (event?: FormEvent) => {
@@ -274,7 +274,7 @@ const getKey = (keySelector: KeySelector<any, any>) => {
         if (typeof prop === 'symbol') {
           throw new Error(`Can't serialize symbols to keys`);
         }
-        if (typeof prop === 'number') {
+        if (typeof prop === 'number' || !isNaN(prop as any)) {
           target.path = `${target.path}[${prop}]`;
         } else {
           target.path = target.path.length ? `${target.path}.${prop}` : prop;
@@ -344,8 +344,14 @@ const getPropType = (key: string) => {
   if (firstDot < 0 && firstBracket < 0) {
     return 'terminal' as const;
   }
+  if (firstDot < 0) {
+    return 'array' as const;
+  }
+  if (firstBracket < 0) {
+    return 'object' as const;
+  }
 
-  if (firstDot > 0 && firstDot < firstBracket) {
+  if (firstDot < firstBracket) {
     return 'object' as const;
   }
   return 'array' as const;

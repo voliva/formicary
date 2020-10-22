@@ -4,12 +4,13 @@ import * as ReactDOM from 'react-dom';
 import { isAtMost, isNumber, isRequired, pipeValidators, useForm } from '../.';
 
 const Form = () => {
-  const { register, errors } = useForm<{
+  const { register, errors, useWatch, onSubmit } = useForm<{
     min: number;
     max: number;
   }>({
-    onSubmit: () => {},
+    onSubmit: console.log,
   });
+  const min = useWatch('min');
 
   return (
     <div>
@@ -34,6 +35,8 @@ const Form = () => {
           .map(key => `${key}: ${errors[key]!.join(', ')}`)
           .join('; ')}
       </div>
+      <div>Minimum: {min}</div>
+      <button onClick={onSubmit}>Submit</button>
     </div>
   );
 };
