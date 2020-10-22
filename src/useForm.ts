@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BehaviorSubject,
   concat,
@@ -50,8 +50,12 @@ export const useForm: UseForm = <TValues>(options: UseFormOptions<TValues>) => {
         subject
       ).pipe(
         switchMap(value => {
-          const result = validator(value, key => {
-            const targetControl = registeredControls.current.get(key)!; // TODO undefined?
+          const result = validator(value, keySelector => {
+            const key = getKey(keySelector);
+            const targetControl = registeredControls.current.get(key);
+            if (!targetControl) {
+              throw new Error(`Control "${key}" hasn't been registered yet`);
+            }
             dependency$.next(targetControl.subject);
             return targetControl.subject.getValue();
           });
@@ -224,12 +228,36 @@ export const useForm: UseForm = <TValues>(options: UseFormOptions<TValues>) => {
     return control ? control.subject.getValue() : defaultValue;
   };
 
+  const onSubmit = (event?: FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
+    const controls = registeredControls.current;
+    const propValues = Object.fromEntries(
+      Array.from(controls.entries()).map(
+        ([key, control]) => [key, control.subject.getValue()] as const
+      )
+    );
+    const formValue = buildObject(propValues);
+    const result = options.onSubmit(formValue, isValid);
+    if (typeof result === 'object') {
+      result
+        .then(validationResult => {
+          if (validationResult) {
+            setErrors(validationResult);
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
   return {
     registerControl,
     register,
     errors: publicErrors,
     isValid,
     useWatch,
+    onSubmit,
   };
 };
 
@@ -264,37 +292,63 @@ const getKey = (keySelector: KeySelector<any, any>) => {
   return result[path];
 };
 
-const setProp = (obj: any, prop: string, value: any): void => {
-  if (prop.startsWith('[')) {
-    const end = prop.indexOf(']');
-    const num = Number(prop.substring(1, end));
-    const remaining = prop.substring(end + 2);
+const buildObject = (propValues: Record<string, any>) => {
+  let ret: any = {};
+  for (let key in propValues) {
+    setProp(ret, key, propValues[key]);
+  }
+  return ret;
+};
+const setProp = (obj: any, key: string, value: any): void => {
+  if (key.startsWith('[')) {
+    const end = key.indexOf(']');
+    const num = Number(key.substring(1, end));
+    const remaining = key.substring(end + 1);
     if (remaining.length) {
-      obj[num] = obj[num] || {};
+      if (remaining.startsWith('.')) {
+        obj[num] = obj[num] || {};
+        return setProp(obj[num], remaining.slice(1), value);
+      }
+      obj[num] = obj[num] || [];
       return setProp(obj[num], remaining, value);
     }
     obj[num] = value;
     return;
   }
 
-  const firstDot = prop.indexOf('.');
-  const firstBracket = prop.indexOf('[');
+  const propType = getPropType(key);
+  switch (propType) {
+    case 'array': {
+      const firstBracket = key.indexOf('[');
+      const prop = key.substring(0, firstBracket);
+      const remaining = key.substring(firstBracket);
+      obj[prop] = obj[prop] || [];
+      return setProp(obj[prop], remaining, value);
+    }
+    case 'object': {
+      const firstDot = key.indexOf('.');
+      const prop = key.substring(0, firstDot);
+      const remaining = key.substring(firstDot + 1);
+      obj[prop] = obj[prop] || {};
+      return setProp(obj[prop], remaining, value);
+    }
+    case 'terminal': {
+      obj[key] = value;
+      return;
+    }
+  }
+};
+const getPropType = (key: string) => {
+  const firstDot = key.indexOf('.');
+  const firstBracket = key.indexOf('[');
   if (firstDot < 0 && firstBracket < 0) {
-    obj[prop] = value;
-    return;
+    return 'terminal' as const;
   }
 
   if (firstDot > 0 && firstDot < firstBracket) {
-    const property = prop.substring(0, firstDot);
-    const remaining = prop.substring(firstDot + 1);
-    obj[property] = obj[property] || {};
-    return setProp(obj[property], remaining, value);
+    return 'object' as const;
   }
-
-  const property = prop.substring(0, firstBracket);
-  const remaining = prop.substring(firstBracket);
-  obj[property] = obj[property] || {};
-  return setProp(obj[property], remaining, value);
+  return 'array' as const;
 };
 
 const arrayEquals = <T>(a: T[], b: T[]) =>

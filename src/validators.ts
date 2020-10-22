@@ -1,6 +1,8 @@
-export type Validator<T> = (
+import { KeySelector } from './useForm.types';
+
+export type Validator<T, TValues = any> = (
   value: T,
-  getValue: (key: string) => any
+  getValue: (key: KeySelector<TValues, T>) => any
 ) => boolean | string[] | Promise<boolean | string[]>;
 
 type ValidatorParam<T> = T | ((getValue: (key: string) => any) => T);
@@ -94,13 +96,13 @@ const recPipeValidators = (
   return processResult(syncResult);
 };
 
-export const pipeValidators = (
-  ...validators: Array<Validator<any>>
-): Validator<any> => recPipeValidators(validators, 0);
+export const pipeValidators = <TValue>(
+  ...validators: Array<Validator<any, TValue>>
+): Validator<any, TValue> => recPipeValidators(validators, 0);
 
-export const mergeValidators = (
-  ...validators: Array<Validator<any>>
-): Validator<any> => (value, getValue) => {
+export const mergeValidators = <TValue>(
+  ...validators: Array<Validator<any, TValue>>
+): Validator<any, TValue> => (value, getValue) => {
   const syncResults = validators.map(validate => validate(value, getValue));
 
   const processResult = (results: (boolean | string[])[]) => {

@@ -1,3 +1,4 @@
+import { FormEvent } from 'react';
 import { Validator } from './validators';
 
 export type SetPropTypes<O, T> = {
@@ -12,12 +13,12 @@ export interface Control<T> {
 export type RegisterControlOptions<TValues, T> = {
   key: KeySelector<TValues, T>;
   initialValue: T;
-  validator?: Validator<T>;
+  validator?: Validator<T, TValues>;
 };
 export type RegisterOptions<TValues, T> = {
   key: KeySelector<TValues, T>;
   initialValue: T;
-  validator?: Validator<T>;
+  validator?: Validator<T, TValues>;
   elementProp?: string;
   eventType?: 'input' | 'onChange';
 } & (
@@ -30,11 +31,9 @@ export type RegisterOptions<TValues, T> = {
 
 export interface UseFormOptions<TValues> {
   onSubmit: (
-    values: TValues
-  ) => void | Promise<void | {
-    errors: string[];
-    fieldErrors: Partial<SetPropTypes<TValues, string[]>>;
-  }>;
+    values: TValues,
+    isValid: boolean | 'pending'
+  ) => void | Promise<void | Record<string, string[]>>;
 }
 export interface UseWatch<TValues> {
   <T>(key: KeySelector<TValues, T>): T | undefined;
@@ -47,6 +46,7 @@ export interface UseForm {
     ) => Control<T>;
     errors: Record<string, string[]>;
     isValid: boolean | 'pending';
+    onSubmit: (event?: FormEvent) => void;
     useWatch: UseWatch<TValues>;
 
     register: <T>(
