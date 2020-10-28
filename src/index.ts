@@ -1,4 +1,11 @@
-export { useForm } from './useForm';
+export {
+  useForm,
+  useControlledField,
+  useField,
+  readForm,
+  useWatch,
+  useErrors,
+} from './useForm';
 export {
   Validator,
   isAtLeast,

@@ -1,4 +1,4 @@
-import { KeySelector } from './useForm.types';
+import { KeySelector } from './path';
 
 export type Validator<T, TValues = any> = (
   value: T,
