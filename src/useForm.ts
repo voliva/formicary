@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BehaviorSubject,
   concat,
+  EMPTY,
   merge,
   Observable,
   of,
@@ -16,6 +17,7 @@ import {
   scan,
   filter,
   distinctUntilChanged,
+  startWith,
 } from 'rxjs/operators';
 import {
   buildObject,
@@ -35,6 +37,13 @@ export interface FormRef<T extends Record<string, any>> {
       subscriptions: Set<Subscription>;
     }
   >;
+  registeredValidators: Map<
+    string,
+    {
+      error$: Observable<boolean | string[] | 'pending'>;
+      subscriptions: Set<Subscription>;
+    }
+  >;
 }
 
 export const useForm = <
@@ -42,20 +51,21 @@ export const useForm = <
 >() => {
   const ref = useRef<FormRef<T>>({
     registeredControls: new Map(),
+    registeredValidators: new Map(),
   });
   return ref.current;
 };
 
-export interface ControlledFieldOptions<TValues, T> {
+export interface ControlOptions<TValues, T> {
   key: KeySelector<TValues, T>;
   initialValue: T;
   validator?: Validator<T, TValues>;
 }
 
 const noopValidator: Validator<any> = () => true;
-export const useControlledField = <TValues, T>(
+export const useControl = <TValues, T>(
   formRef: FormRef<TValues>,
-  options: ControlledFieldOptions<TValues, T>
+  options: ControlOptions<TValues, T>
 ) => {
   const key = getKey(options.key);
   const {
@@ -114,15 +124,15 @@ export const useControlledField = <TValues, T>(
   };
 };
 
-export const useField = <TValues, T>(
+export const useInput = <TValues, T>(
   formRef: FormRef<TValues>,
-  options: ControlledFieldOptions<TValues, T> & {
+  options: ControlOptions<TValues, T> & {
     elementProp?: string;
     eventType?: 'input' | 'onChange';
   }
 ) => {
   const { eventType = 'input', elementProp = 'value' } = options;
-  const { setValue, subscribe } = useControlledField(formRef, options);
+  const { setValue, subscribe } = useControl(formRef, options);
   const ref = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -185,14 +195,78 @@ export function useWatch<TValues, T>(
   return value !== empty ? (value as T) : defaultValue;
 }
 
-const ALL_KEYS = Symbol('all');
-export const useErrors = <TValues>(
+export const useValidation = <TValues>(
   formRef: FormRef<TValues>,
+  key: string,
+  validator: (
+    getValues: (keys?: KeysSelector<TValues>) => Record<string, any>
+  ) => boolean | string[] | Promise<boolean | string[]>
+) =>
+  useEffect(() => {
+    if (formRef.registeredValidators.has(key)) {
+      throw new Error(`global validator "${key}" already registered`);
+    }
+
+    const dependency$ = new Subject<BehaviorSubject<any> | 'all'>();
+
+    const error$ = dependency$.pipe(
+      switchMap(v => {
+        if (v === 'all') {
+          // TODO
+          return EMPTY;
+        }
+        return of(v);
+      }),
+      filterSeenValues(),
+      mergeMap(subject => subject.pipe(skip(1))),
+      startWith(null),
+      switchMap(() => {
+        const result = validator(keysSelector => {
+          const controls = formRef.registeredControls;
+          if (!keysSelector) {
+            dependency$.next('all');
+            return Object.fromEntries(
+              Array.from(controls.entries()).map(
+                ([key, control]) => [key, control.subject.getValue()] as const
+              )
+            );
+          }
+          const keys = getKeys(keysSelector);
+          keys.forEach(key => {
+            const targetControl = formRef.registeredControls.get(key);
+            if (!targetControl) {
+              // TODO wait for it somehow?
+              return;
+            }
+            dependency$.next(targetControl.subject);
+          });
+          return Object.fromEntries(
+            keys.map(key => {
+              const targetControl = formRef.registeredControls.get(key);
+              if (!targetControl) return [key, undefined];
+              return [key, targetControl.subject.getValue()];
+            })
+          );
+        });
+        if (typeof result === 'boolean' || Array.isArray(result)) {
+          return of(result);
+        }
+        return concat(of('pending' as const), result);
+      })
+    );
+    formRef.registeredValidators.set(key, {
+      error$,
+      subscriptions: new Set(),
+    });
+  }, [key, formRef, validator]);
+// TODO validate in `useErrorCb`
+
+const ALL_KEYS = Symbol('all');
+const useErrorCb = <TValues>(
+  formRef: FormRef<TValues>,
+  onErrors: (errors: Record<string, 'pending' | string[]>) => void,
   keysSelector?: KeysSelector<TValues>
 ) => {
-  const [errors, setErrors] = useState<Record<string, 'pending' | string[]>>(
-    {}
-  );
   const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
 
   useEffect(() => {
@@ -200,12 +274,6 @@ export const useErrors = <TValues>(
       keys[0] === ALL_KEYS
         ? Array.from(formRef.registeredControls.keys())
         : keys.filter(key => formRef.registeredControls.has(key));
-    // TODO updating keys when new components become used/unsued
-    // TODO think how to do a global isValid (only rerender if it changes global valid.... with same keysSelector API)
-    //// |-> In that case, maybe add an optional parameter for a global validation? This way the consumer won't need
-    //// |   to use `useWatch` and re-render on every single keystroke.
-    // TODO (cont) or as a separate hook: `useValidation` for global validations. Then consumer can combine useIsValid + useValidation if needed
-    //    (This is so the consumer can enable/disable button)
     const result$ = merge(
       ...keysToSubscribe.map(key =>
         formRef.registeredControls.get(key)!.error$.pipe(
@@ -244,15 +312,64 @@ export const useErrors = <TValues>(
           };
         }
         return prevErrors;
-      }, errors),
+      }, {} as Record<string, 'pending' | string[]>),
       distinctUntilChanged()
     );
-    const subscription = result$.subscribe(setErrors);
+    const subscription = result$.subscribe(onErrors);
     return () => subscription.unsubscribe();
   }, keys);
+};
+export const useErrors = <TValues>(
+  formRef: FormRef<TValues>,
+  keysSelector?: KeysSelector<TValues>
+) => {
+  const [errors, setErrors] = useState<Record<string, 'pending' | string[]>>(
+    {}
+  );
+  useErrorCb(formRef, setErrors, keysSelector);
 
   return errors;
 };
+
+export const useIsValid = <TValues>(
+  formRef: FormRef<TValues>,
+  keysSelector?: KeysSelector<TValues>
+) => {
+  const [isValid, setIsValid] = useState<boolean | 'pending'>(true);
+
+  useErrorCb(
+    formRef,
+    errors => {
+      const errorValues = Object.values(errors);
+      let hasPending = false;
+      const hasError = errorValues.some(error => {
+        if (error === 'pending') {
+          hasPending = true;
+          return false;
+        }
+        return true;
+      });
+      setIsValid(hasError ? false : hasPending ? 'pending' : true);
+    },
+    keysSelector
+  );
+
+  return isValid;
+};
+
+/** TODO
+ * pristine
+ *  -> useIsPristine For a specific field (?... is it useful?), or for all of them. Returns true/false
+ *  -> formRef.markPristine()
+ * reset: resets each field to its initial value
+ *  -> formRef.reset()
+ * If I'm moving on this API, then maybe readForm should become formRef.read()
+ *
+ * Speaking of initial values... think on how to make changing initial values. The example of ADSS:
+ * - Select Monthly or Quaterly
+ * - User can select the next 12 months from a split [Month] Select and [Year] Select
+ * - Quaterly can only choose specific months
+ */
 
 const empty = Symbol('empty');
 const filterSeenValues = () => <T>(source$: Observable<T>) =>

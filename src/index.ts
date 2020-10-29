@@ -1,7 +1,7 @@
 export {
   useForm,
-  useControlledField,
-  useField,
+  useControl as useControlledField,
+  useInput as useField,
   readForm,
   useWatch,
   useErrors,
