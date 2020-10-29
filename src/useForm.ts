@@ -64,6 +64,7 @@ export const useControlledField = <TValues, T>(
   } = options;
   const latestValidator = useLatestRef(validator);
 
+  // TODO move to useEffect
   if (!formRef.registeredControls.has(key)) {
     const subject = new BehaviorSubject(initialValue);
     const dependency$ = new Subject<BehaviorSubject<any>>();
@@ -198,19 +199,22 @@ export const useErrors = <TValues>(
     const keysToSubscribe =
       keys[0] === ALL_KEYS
         ? Array.from(formRef.registeredControls.keys())
-        : keys;
-
+        : keys.filter(key => formRef.registeredControls.has(key));
+    // TODO updating keys when new components become used/unsued
+    // TODO think how to do a global isValid (only rerender if it changes global valid.... with same keysSelector API)
+    //// |-> In that case, maybe add an optional parameter for a global validation? This way the consumer won't need
+    //// |   to use `useWatch` and re-render on every single keystroke.
+    // TODO (cont) or as a separate hook: `useValidation` for global validations. Then consumer can combine useIsValid + useValidation if needed
+    //    (This is so the consumer can enable/disable button)
     const result$ = merge(
-      ...keysToSubscribe
-        .filter(key => formRef.registeredControls.has(key))
-        .map(key =>
-          formRef.registeredControls.get(key)!.error$.pipe(
-            map(errorResult => ({
-              key,
-              errorResult,
-            }))
-          )
+      ...keysToSubscribe.map(key =>
+        formRef.registeredControls.get(key)!.error$.pipe(
+          map(errorResult => ({
+            key,
+            errorResult,
+          }))
         )
+      )
     ).pipe(
       scan((prevErrors, { key, errorResult }) => {
         switch (errorResult) {
