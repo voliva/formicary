@@ -121,6 +121,8 @@ export const mergeValidators = <TValue>(
   return processResult(syncResults as any);
 };
 
+export const noopValidator: Validator<any> = () => true;
+
 const validationResultIsAsync = (
   result: ReturnType<Validator<any>>
 ): result is Promise<any> =>

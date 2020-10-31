@@ -7,24 +7,23 @@ import {
   isRequired,
   pipeValidators,
   readForm,
-  useField,
+  useInput,
   useForm,
   useWatch,
   useErrors,
 } from '.././src';
 
 const Form = () => {
-  console.log('rerender');
   const form = useForm<{
     min: number;
     max: number;
   }>();
-  const minField = useField(form, {
+  const minField = useInput(form, {
     key: v => v.min,
     initialValue: 0,
     validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
   });
-  const maxField = useField(form, {
+  const maxField = useInput(form, {
     key: v => v.max,
     initialValue: 0,
     validator: pipeValidators(isRequired, isNumber),
@@ -38,7 +37,14 @@ const Form = () => {
       <input placeholder="max" ref={maxField} />
       <div data-testid="errors">
         {Object.keys(errors)
-          .map(key => `${key}: ${errors[key]!.join(', ')}`)
+          .map(
+            key =>
+              `${key}: ${
+                typeof errors[key] === 'string'
+                  ? errors[key]
+                  : errors[key]!.join(', ')
+              }`
+          )
           .join('; ')}
       </div>
       <div>Minimum: {min}</div>
