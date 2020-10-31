@@ -1,6 +1,6 @@
-import { shareLatest } from '@react-rxjs/core';
+import { bind, shareLatest } from '@react-rxjs/core';
 import { createListener } from '@react-rxjs/utils';
-import { Observable, EMPTY } from 'rxjs';
+import { Observable, EMPTY, combineLatest } from 'rxjs';
 import {
   distinctUntilChanged,
   filter,
@@ -29,6 +29,8 @@ export interface FormRef<T extends Record<string, any>> {
   };
   value$: Observable<Map<string, SyncObservable<any>>>;
   error$: Observable<Map<string, Observable<boolean | string[] | 'pending'>>>;
+  useIsPristine: () => boolean;
+  reset: (key?: string) => void;
   dispose: () => void;
 }
 
@@ -65,6 +67,27 @@ export const createFormRef = <
     shareLatest()
   );
   const sub = controls$.subscribe();
+
+  const [useIsPristine] = bind(
+    controls$.pipe(
+      switchMap(controls =>
+        combineLatest(
+          Array.from(controls.values()).map(control => control.isPristine$)
+        ).pipe(map(pristines => pristines.every(p => p)))
+      )
+    ),
+    true
+  );
+
+  const reset = (key?: string) => {
+    controls$
+      .pipe(take(1))
+      .subscribe(controls =>
+        key
+          ? controls.get(key)?.reset()
+          : controls.forEach(control => control.reset())
+      );
+  };
 
   return {
     registerControl,
@@ -121,5 +144,7 @@ export const createFormRef = <
       });
       sub.unsubscribe();
     },
+    useIsPristine,
+    reset,
   };
 };

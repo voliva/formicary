@@ -10,6 +10,7 @@ import {
   Subject,
 } from 'rxjs';
 import {
+  distinctUntilChanged,
   map,
   mergeMap,
   skip,
@@ -39,6 +40,7 @@ export interface Control<TValues, T> {
   replaceInitialValue: (initialValue: T) => void;
   dispose: () => void;
   value$: SyncObservable<T>;
+  isPristine$: Observable<boolean>;
   error$: Observable<boolean | string[] | 'pending'>;
 }
 
@@ -84,6 +86,11 @@ export const createControl = <TValues, T>(
       }
     },
   });
+
+  const isPristine$ = combineLatest([value$, initialValue$]).pipe(
+    map(([value, initialValue]) => value === initialValue),
+    distinctUntilChanged()
+  );
 
   const dependency$ = new Subject<Observable<any>>();
 
@@ -137,6 +144,7 @@ export const createControl = <TValues, T>(
     reset,
     setValue,
     value$,
+    isPristine$,
     dispose: () => sub.unsubscribe(),
   };
 };

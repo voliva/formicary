@@ -13,22 +13,3 @@ export const useForm = <
 
   return ref.current;
 };
-
-/** TODO
- * pristine
- *  -> useIsPristine For a specific field (?... is it useful?), or for all of them. Returns true/false
- *  -> formRef.markPristine()
- * reset: resets each field to its initial value
- *  -> formRef.reset()
- * If I'm moving on this API, then maybe readForm should become formRef.read()
- *
- * Speaking of initial values... think on how to make changing initial values. The example of ADSS:
- * - Select Monthly or Quaterly
- * - User can select the next 12 months from a split [Month] Select and [Year] Select
- * - Quaterly can only choose specific months
- *
- * TODO -> Ability to remove fields. react-hook-form cleans up when a field gets unmounted,
- * I don't want to do that. Cleanup on demand
- *
- * TODO -> Ability to change values, externally (setValue(form, key, value)) and internally (useDerivedValue(form, (getValue, setValue) => {}))
- */

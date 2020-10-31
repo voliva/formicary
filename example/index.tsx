@@ -11,6 +11,7 @@ import {
   useForm,
   useWatch,
   useErrors,
+  useIsPristine,
 } from '.././src';
 
 const Form = () => {
@@ -18,36 +19,27 @@ const Form = () => {
     min: number;
     max: number;
   }>();
-  const minField = useInput(form, {
+  const [minField, minErrors] = useInput(form, {
     key: v => v.min,
-    initialValue: 0,
+    initialValue: '0',
     validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
   });
-  const maxField = useInput(form, {
+  const [maxField, maxErrors] = useInput(form, {
     key: v => v.max,
-    initialValue: 0,
+    initialValue: '0',
     validator: pipeValidators(isRequired, isNumber),
   });
   const min = useWatch(form, v => v.min);
-  const errors = useErrors(form);
+  const pristine = useIsPristine(form);
 
   return (
     <div>
       <input placeholder="min" ref={minField} />
       <input placeholder="max" ref={maxField} />
-      <div data-testid="errors">
-        {Object.keys(errors)
-          .map(
-            key =>
-              `${key}: ${
-                typeof errors[key] === 'string'
-                  ? errors[key]
-                  : errors[key]!.join(', ')
-              }`
-          )
-          .join('; ')}
-      </div>
+      <div>minErrors: {minErrors}</div>
+      <div>maxErrors: {maxErrors}</div>
       <div>Minimum: {min}</div>
+      <div>{pristine ? 'pristine' : 'dirty'}</div>
       <button
         onClick={() => {
           console.log(readForm(form));

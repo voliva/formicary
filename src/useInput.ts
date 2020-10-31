@@ -1,7 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { ControlOptions } from './internal/control';
 import { useControl } from './useControl';
 import { FormRef } from './internal/formRef';
+import { useErrors } from './useErrors';
+import { getKey } from './path';
 
 export const useInput = <TValues, T>(
   formRef: FormRef<TValues>,
@@ -12,23 +14,32 @@ export const useInput = <TValues, T>(
 ) => {
   const { eventType = 'input', elementProp = 'value' } = options;
   const { setValue, subscribe } = useControl(formRef, options);
+  const [touched, setTouched] = useState(false);
   const ref = useRef<HTMLInputElement | null>(null);
+
+  const key = getKey(options.key);
+  const errors = useErrors(formRef, [key]);
+  const error = touched ? errors[key] : null;
 
   useEffect(() => {
     const element = ref.current;
     if (!element) {
       return;
     }
-    const listener = (event: any) => setValue(event.target[elementProp]);
+
     const unsubscribe = subscribe(
       value => ((element as any)[elementProp] = value)
     );
-    element.addEventListener(eventType, listener);
+    const blurListener = () => setTouched(true);
+    element.addEventListener('blur', blurListener);
+    const valueListener = (event: any) => setValue(event.target[elementProp]);
+    element.addEventListener(eventType, valueListener);
     return () => {
       unsubscribe();
-      element.removeEventListener(eventType, listener);
+      element.removeEventListener('blur', blurListener);
+      element.removeEventListener(eventType, valueListener);
     };
   });
 
-  return ref;
+  return [ref, error] as const;
 };
