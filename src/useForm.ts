@@ -18,6 +18,9 @@ import {
   filter,
   distinctUntilChanged,
   startWith,
+  exhaustMap,
+  switchAll,
+  mergeAll,
 } from 'rxjs/operators';
 import {
   buildObject,
@@ -29,31 +32,38 @@ import {
 import { Validator } from './validators';
 
 export interface FormRef<T extends Record<string, any>> {
-  registeredControls: Map<
-    string,
-    {
-      subject: BehaviorSubject<any>;
-      error$: Observable<boolean | string[] | 'pending'>;
-      subscriptions: Set<Subscription>;
-    }
+  registeredControls$: BehaviorSubject<
+    Map<
+      string,
+      {
+        subject: BehaviorSubject<any>;
+        error$: Observable<boolean | string[] | 'pending'>;
+        subscriptions: Set<Subscription>;
+      }
+    >
   >;
-  registeredValidators: Map<
-    string,
-    {
-      error$: Observable<boolean | string[] | 'pending'>;
-      subscriptions: Set<Subscription>;
-    }
+  registeredValidators$: BehaviorSubject<
+    Map<
+      string,
+      {
+        error$: Observable<boolean | string[] | 'pending'>;
+        subscriptions: Set<Subscription>;
+      }
+    >
   >;
 }
 
 export const useForm = <
   T extends Record<string, any> = Record<string, any>
 >() => {
-  const ref = useRef<FormRef<T>>({
-    registeredControls: new Map(),
-    registeredValidators: new Map(),
-  });
-  return ref.current;
+  const ref = useRef<FormRef<T> | null>(null);
+  if (!ref.current) {
+    ref.current = {
+      registeredControls$: new BehaviorSubject(new Map()),
+      registeredValidators$: new BehaviorSubject(new Map()),
+    };
+  }
+  return ref.current!;
 };
 
 export interface ControlOptions<TValues, T> {
@@ -73,9 +83,9 @@ export const useControl = <TValues, T>(
     validator = noopValidator as Validator<T, TValues>,
   } = options;
   const latestValidator = useLatestRef(validator);
+  const registeredControls = formRef.registeredControls$.getValue();
 
-  // TODO move to useEffect
-  if (!formRef.registeredControls.has(key)) {
+  if (!registeredControls.has(key)) {
     const subject = new BehaviorSubject(initialValue);
     const dependency$ = new Subject<BehaviorSubject<any>>();
 
@@ -90,7 +100,7 @@ export const useControl = <TValues, T>(
       switchMap(value => {
         const result = latestValidator.current(value, keySelector => {
           const key = getKey(keySelector);
-          const targetControl = formRef.registeredControls.get(key);
+          const targetControl = formRef.registeredControls$.getValue().get(key);
           if (!targetControl) {
             throw new Error(`Control "${key}" hasn't been registered yet`);
           }
@@ -103,13 +113,14 @@ export const useControl = <TValues, T>(
         return concat(of('pending' as const), result);
       })
     );
-    formRef.registeredControls.set(key, {
+    registeredControls.set(key, {
       subject,
       error$,
       subscriptions: new Set(),
     });
+    formRef.registeredControls$.next(registeredControls);
   }
-  const control = formRef.registeredControls.get(key)!;
+  const control = registeredControls.get(key)!;
 
   return {
     setValue: (value: T) => control.subject.next(value),
@@ -155,7 +166,7 @@ export const useInput = <TValues, T>(
 };
 
 export const readForm = <T>(formRef: FormRef<T>): T => {
-  const controls = formRef.registeredControls;
+  const controls = formRef.registeredControls$.getValue();
   const propValues = Object.fromEntries(
     Array.from(controls.entries()).map(
       ([key, control]) => [key, control.subject.getValue()] as const
@@ -182,13 +193,13 @@ export function useWatch<TValues, T>(
   const key = getKey(keySelector);
 
   useEffect(() => {
-    const control = formRef.registeredControls.get(key);
-    if (!control) {
-      console.warn(`useWatch: no control registered with key "${key}"`);
-      return;
-    }
+    const sub = formRef.registeredControls$
+      .pipe(
+        filter(controls => controls.has(key)),
+        exhaustMap(controls => controls.get(key)!.subject)
+      )
+      .subscribe(setValue);
 
-    const sub = control.subject.subscribe(setValue);
     return () => sub.unsubscribe();
   }, [key]);
 
@@ -203,7 +214,8 @@ export const useValidation = <TValues>(
   ) => boolean | string[] | Promise<boolean | string[]>
 ) =>
   useEffect(() => {
-    if (formRef.registeredValidators.has(key)) {
+    const registeredValidators = formRef.registeredValidators$.getValue();
+    if (registeredValidators.has(key)) {
       throw new Error(`global validator "${key}" already registered`);
     }
 
@@ -212,8 +224,10 @@ export const useValidation = <TValues>(
     const error$ = dependency$.pipe(
       switchMap(v => {
         if (v === 'all') {
-          // TODO
-          return EMPTY;
+          return formRef.registeredControls$.pipe(
+            switchAll(),
+            map(([, control]) => control.subject)
+          );
         }
         return of(v);
       }),
@@ -222,7 +236,7 @@ export const useValidation = <TValues>(
       startWith(null),
       switchMap(() => {
         const result = validator(keysSelector => {
-          const controls = formRef.registeredControls;
+          const controls = formRef.registeredControls$.getValue();
           if (!keysSelector) {
             dependency$.next('all');
             return Object.fromEntries(
@@ -233,7 +247,7 @@ export const useValidation = <TValues>(
           }
           const keys = getKeys(keysSelector);
           keys.forEach(key => {
-            const targetControl = formRef.registeredControls.get(key);
+            const targetControl = controls.get(key);
             if (!targetControl) {
               // TODO wait for it somehow?
               return;
@@ -242,7 +256,7 @@ export const useValidation = <TValues>(
           });
           return Object.fromEntries(
             keys.map(key => {
-              const targetControl = formRef.registeredControls.get(key);
+              const targetControl = controls.get(key);
               if (!targetControl) return [key, undefined];
               return [key, targetControl.subject.getValue()];
             })
@@ -254,10 +268,15 @@ export const useValidation = <TValues>(
         return concat(of('pending' as const), result);
       })
     );
-    formRef.registeredValidators.set(key, {
+    registeredValidators.set(key, {
       error$,
       subscriptions: new Set(),
     });
+    formRef.registeredValidators$.next(registeredValidators);
+    return () => {
+      registeredValidators.delete(key);
+      formRef.registeredValidators$.next(registeredValidators);
+    };
   }, [key, formRef, validator]);
 // TODO validate in `useErrorCb`
 
@@ -270,13 +289,15 @@ const useErrorCb = <TValues>(
   const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
 
   useEffect(() => {
+    // TODO updates on registeredControl$
+    const controls = formRef.registeredControls$.getValue();
     const keysToSubscribe =
       keys[0] === ALL_KEYS
-        ? Array.from(formRef.registeredControls.keys())
-        : keys.filter(key => formRef.registeredControls.has(key));
+        ? Array.from(controls.keys())
+        : keys.filter(key => controls.has(key));
     const result$ = merge(
       ...keysToSubscribe.map(key =>
-        formRef.registeredControls.get(key)!.error$.pipe(
+        controls.get(key)!.error$.pipe(
           map(errorResult => ({
             key,
             errorResult,
@@ -318,6 +339,68 @@ const useErrorCb = <TValues>(
     const subscription = result$.subscribe(onErrors);
     return () => subscription.unsubscribe();
   }, keys);
+};
+const useGlobalErrorCb = <TValues>(
+  formRef: FormRef<TValues>,
+  onErrors: (errors: Record<string, 'pending' | string[]>) => void,
+  keys: string[]
+) => {
+  const keys_: any[] = keys || [ALL_KEYS];
+
+  useEffect(() => {
+    const activeValidator$ = formRef.registeredValidators$.pipe(
+      map(validators => {
+        const keysToSubscribe =
+          keys_[0] === ALL_KEYS
+            ? Array.from(validators.keys())
+            : keys.filter(key => validators.has(key));
+        return keysToSubscribe.map(key =>
+          validators.get(key)!.error$.pipe(
+            map(errorResult => ({
+              key,
+              errorResult,
+            }))
+          )
+        );
+      })
+    );
+    const result$ = activeValidator$.pipe(
+      switchAll(),
+      mergeAll(),
+      scan((prevErrors, { key, errorResult }) => {
+        switch (errorResult) {
+          case true:
+            if (key in prevErrors) {
+              const { [key]: _, ...newErrors } = prevErrors;
+              return newErrors;
+            }
+            return prevErrors;
+          case 'pending':
+            return {
+              ...prevErrors,
+              [key]: 'pending' as const,
+            };
+        }
+        if (
+          !(key in prevErrors) ||
+          prevErrors[key] === 'pending' ||
+          (typeof errorResult === 'object' &&
+            !arrayEquals(prevErrors[key] as string[], errorResult))
+        ) {
+          const errorValue =
+            typeof errorResult === 'boolean' ? [] : errorResult;
+          return {
+            ...prevErrors,
+            [key]: errorValue,
+          };
+        }
+        return prevErrors;
+      }, {} as Record<string, 'pending' | string[]>),
+      distinctUntilChanged()
+    );
+    const subscription = result$.subscribe(onErrors);
+    return () => subscription.unsubscribe();
+  }, keys_);
 };
 export const useErrors = <TValues>(
   formRef: FormRef<TValues>,
@@ -369,6 +452,11 @@ export const useIsValid = <TValues>(
  * - Select Monthly or Quaterly
  * - User can select the next 12 months from a split [Month] Select and [Year] Select
  * - Quaterly can only choose specific months
+ *
+ * TODO -> Ability to remove fields. react-hook-form cleans up when a field gets unmounted,
+ * I don't want to do that. Cleanup on demand
+ *
+ * TODO -> Ability to change values, externally (setValue(form, key, value)) and internally (useDerivedValue(form, (getValue, setValue) => {}))
  */
 
 const empty = Symbol('empty');
