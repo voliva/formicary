@@ -1,4 +1,4 @@
-import { KeySelector } from './useForm.types';
+import { KeySelector } from './path';
 
 export type Validator<T, TValues = any> = (
   value: T,
@@ -120,6 +120,8 @@ export const mergeValidators = <TValue>(
   }
   return processResult(syncResults as any);
 };
+
+export const noopValidator: Validator<any> = () => true;
 
 const validationResultIsAsync = (
   result: ReturnType<Validator<any>>
