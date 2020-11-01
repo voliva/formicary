@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { FormRef } from './internal/formRef';
-import { getError$ } from './internal/useErrorsCb';
 import { getKey, KeySelector } from './path';
 import { Validator } from './validators';
 
@@ -15,11 +14,7 @@ export const useInput = <TValues, T>(
   } = {}
 ) => {
   const { eventType = 'input', elementProp = 'value' } = options;
-  const [touched, setTouched] = useState(false);
   const ref = useRef<HTMLInputElement | null>(null);
-
-  const [error, setError] = useState<string[] | null>(null);
-  const publicError = touched ? error : null;
 
   useEffect(() => {
     const element = ref.current;
@@ -45,11 +40,8 @@ export const useInput = <TValues, T>(
     const unsubscribe = formRef
       .getControl(key)
       .subscribe(value => ((element as any)[elementProp] = value));
-    const errorSub = getError$(formRef, [key]).subscribe(({ [key]: value }) =>
-      setError(value === 'pending' ? null : value)
-    );
 
-    const blurListener = () => setTouched(true);
+    const blurListener = () => formRef.getControl(key).touch();
     element.addEventListener('blur', blurListener);
     const valueListener = (event: any) =>
       formRef.getControl(key).setValue(event.target[elementProp]);
@@ -57,11 +49,10 @@ export const useInput = <TValues, T>(
 
     return () => {
       unsubscribe();
-      errorSub.unsubscribe();
       element.removeEventListener('blur', blurListener);
       element.removeEventListener(eventType, valueListener);
     };
   });
 
-  return [ref, publicError] as const;
+  return ref;
 };

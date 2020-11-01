@@ -10,7 +10,7 @@ export const useIsValid = <TValues>(
   const [isValid, setIsValid] = useState<boolean | 'pending'>(true);
 
   useErrorsCb(
-    formRef,
+    formRef.error$,
     errors => {
       const errorValues = Object.values(errors);
       let hasPending = false;

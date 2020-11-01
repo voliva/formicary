@@ -1,6 +1,6 @@
 import { bind, shareLatest } from '@react-rxjs/core';
 import { createListener } from '@react-rxjs/utils';
-import { Observable, EMPTY, combineLatest } from 'rxjs';
+import { combineLatest, Observable } from 'rxjs';
 import {
   distinctUntilChanged,
   filter,
@@ -25,10 +25,14 @@ export interface FormRef<T extends Record<string, any>> {
     key: string
   ) => {
     setValue: (value: any) => void;
+    touch: () => void;
     subscribe: (cb: (value: any) => void) => () => void;
   };
   value$: Observable<Map<string, SyncObservable<any>>>;
   error$: Observable<Map<string, Observable<boolean | string[] | 'pending'>>>;
+  touchedError$: Observable<
+    Map<string, Observable<boolean | string[] | 'pending'>>
+  >;
   useIsPristine: () => boolean;
   reset: (key?: string) => void;
   dispose: () => void;
@@ -108,6 +112,15 @@ export const createFormRef = <
             );
           }
         },
+        touch: () => {
+          try {
+            getSyncValue(control$).touch();
+          } catch (ex) {
+            console.warn(
+              `Couldn't touch: Control "${key}" hasn't been registered yet.`
+            );
+          }
+        },
         subscribe: (cb: (value: TValues) => void) => {
           const sub = control$
             .pipe(switchMap(control => control.value$))
@@ -134,6 +147,22 @@ export const createFormRef = <
           new Map(
             Array.from(control.entries()).map(
               ([key, control]) => [key, control.error$] as const
+            )
+          )
+      )
+    ),
+    touchedError$: controls$.pipe(
+      map(
+        control =>
+          new Map(
+            Array.from(control.entries()).map(
+              ([key, control]) =>
+                [
+                  key,
+                  combineLatest([control.error$, control.isTouched$]).pipe(
+                    map(([errors, isTouched]) => (isTouched ? errors : true))
+                  ),
+                ] as const
             )
           )
       )

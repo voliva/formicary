@@ -12,6 +12,7 @@ import {
 import {
   distinctUntilChanged,
   map,
+  mapTo,
   mergeMap,
   skip,
   startWith,
@@ -38,10 +39,12 @@ export interface Control<TValues, T> {
   reset: () => void;
   replaceValidator: (validator?: Validator<T, TValues>) => void;
   replaceInitialValue: (initialValue: T) => void;
+  touch: () => void;
   dispose: () => void;
   value$: SyncObservable<T>;
   isPristine$: Observable<boolean>;
   error$: Observable<boolean | string[] | 'pending'>;
+  isTouched$: Observable<boolean>;
 }
 
 export const createControl = <TValues, T>(
@@ -95,14 +98,17 @@ export const createControl = <TValues, T>(
   const dependency$ = new Subject<Observable<any>>();
 
   const error$ = combineLatest([
-    value$,
-    validator$,
+    // Subscribe on asapScheduler to let react run through all useEffects and register
+    // all the fields before subscribing.
+    value$.pipe(subscribeOn(asapScheduler)),
     dependency$.pipe(
       filterSeenValues(),
       mergeMap(subject => subject.pipe(skip(1))),
       startWith(null)
     ),
   ]).pipe(
+    map(([value]) => value),
+    withLatestFrom(validator$), // Validator can't be put in `combineLatest` unless we force useMemo on validators
     switchMap(([value, latestValidator]) => {
       try {
         const result = latestValidator(value, keySelector => {
@@ -133,9 +139,14 @@ export const createControl = <TValues, T>(
     }),
     shareLatest()
   );
-  // Subscribe on asapScheduler to let react run through all useEffects and register
-  // all the fields before subscribing.
-  const sub = error$.pipe(subscribeOn(asapScheduler)).subscribe();
+  const sub = error$.subscribe();
+
+  const [touches$, touch] = createListener();
+  const isTouched$ = merge(
+    reset$.pipe(mapTo(false)),
+    touches$.pipe(mapTo(true))
+  ).pipe(startWith(false), distinctUntilChanged(), shareLatest());
+  sub.add(isTouched$.subscribe());
 
   return {
     error$,
@@ -146,6 +157,8 @@ export const createControl = <TValues, T>(
     value$,
     isPristine$,
     dispose: () => sub.unsubscribe(),
+    touch,
+    isTouched$,
   };
 };
 

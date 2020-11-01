@@ -1,15 +1,15 @@
 import { mergeWithKey } from '@react-rxjs/utils';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { Observable } from 'rxjs';
 import { debounceTime, scan, startWith, switchMap } from 'rxjs/operators';
-import { KeysSelector, getKeys } from '../path';
-import { FormRef } from './formRef';
+import { getKeys, KeysSelector } from '../path';
 import { arrayEquals } from './util';
 
-export const getError$ = <TValues>(
-  formRef: FormRef<TValues>,
+const getError$ = <TValues>(
+  error$: Observable<Map<string, Observable<boolean | string[] | 'pending'>>>,
   keys: 'all' | string[]
 ) =>
-  formRef.error$.pipe(
+  error$.pipe(
     switchMap(controls =>
       mergeWithKey(
         Object.fromEntries(
@@ -53,7 +53,7 @@ export const getError$ = <TValues>(
 
 const ALL_KEYS = Symbol('all');
 export const useErrorsCb = <TValues>(
-  formRef: FormRef<TValues>,
+  error$: Observable<Map<string, Observable<boolean | string[] | 'pending'>>>,
   callback: (erros: Record<string, 'pending' | string[]>) => void,
   keysSelector?: KeysSelector<TValues>
 ) => {
@@ -61,10 +61,10 @@ export const useErrorsCb = <TValues>(
 
   useEffect(() => {
     const sub = getError$(
-      formRef,
+      error$,
       keys[0] === ALL_KEYS ? 'all' : keys
     ).subscribe(callback);
 
     return () => sub.unsubscribe();
-  }, [formRef, ...keys]);
+  }, [error$, ...keys]);
 };

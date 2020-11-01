@@ -3,7 +3,6 @@ import { FormRef } from './internal/formRef';
 import { useErrorsCb } from './internal/useErrorsCb';
 import { KeysSelector } from './path';
 
-const ALL_KEYS = Symbol('all');
 export const useErrors = <TValues>(
   formRef: FormRef<TValues>,
   keysSelector?: KeysSelector<TValues>
@@ -12,7 +11,7 @@ export const useErrors = <TValues>(
     {}
   );
 
-  useErrorsCb(formRef, setErrors, keysSelector);
+  useErrorsCb(formRef.touchedError$, setErrors, keysSelector);
 
   return errors;
 };
