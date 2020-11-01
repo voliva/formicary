@@ -67,7 +67,6 @@ export const createFormRef = <
       return controls;
     }, new Map<string, Control<TValues, any>>()),
     startWith(new Map<string, Control<TValues, any>>()),
-    distinctUntilChanged((a, b) => a.size === b.size),
     shareLatest()
   );
   const sub = controls$.subscribe();
