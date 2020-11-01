@@ -20,12 +20,10 @@ const Form = () => {
     max: number;
   }>();
   const [minField, minErrors] = useInput(form, {
-    key: v => v.min,
     initialValue: '0',
     validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
   });
   const [maxField, maxErrors] = useInput(form, {
-    key: v => v.max,
     initialValue: '0',
     validator: pipeValidators(isRequired, isNumber),
   });
@@ -34,8 +32,8 @@ const Form = () => {
 
   return (
     <div>
-      <input placeholder="min" ref={minField} />
-      <input placeholder="max" ref={maxField} />
+      <input name="min" placeholder="min" ref={minField} />
+      <input name="max" placeholder="max" ref={maxField} />
       <div>minErrors: {minErrors}</div>
       <div>maxErrors: {maxErrors}</div>
       <div>Minimum: {min}</div>

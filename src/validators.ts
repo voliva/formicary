@@ -74,6 +74,16 @@ export const isLessThan = (
   return true;
 };
 
+export const matches = (
+  regex: RegExp,
+  message?: string
+): Validator<string> => value => {
+  if (regex.test(value)) {
+    return true;
+  }
+  return [message ?? 'Invalid value'];
+};
+
 const recPipeValidators = (
   validators: Array<Validator<any>>,
   i: number

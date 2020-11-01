@@ -20,7 +20,9 @@ export {
   isRequired,
   mergeValidators,
   pipeValidators,
+  matches,
 } from './validators';
+export { FormRef } from './internal/formRef';
 
 /* TODO
 - Global validations
@@ -29,4 +31,7 @@ export {
 - Better control of touched
   * use case "I don't disable submit button, but when the user presses I want to show all fields with validation errors even if untouched"
   * show error if a dependency causes that field to go on error, even when left untouched
+  => I need touched to be higher up, so I can provide a hook "useTouchedErrors"
+- Custom typings for FormRef (as an opaque token)
+- Default validators to give an error type instead of a localised message
 */

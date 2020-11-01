@@ -1,45 +1,67 @@
-import { useRef, useEffect, useState } from 'react';
-import { ControlOptions } from './internal/control';
-import { useControl } from './useControl';
+import { useEffect, useRef, useState } from 'react';
 import { FormRef } from './internal/formRef';
-import { useErrors } from './useErrors';
-import { getKey } from './path';
+import { getError$ } from './internal/useErrorsCb';
+import { getKey, KeySelector } from './path';
+import { Validator } from './validators';
 
 export const useInput = <TValues, T>(
   formRef: FormRef<TValues>,
-  options: ControlOptions<TValues, T> & {
+  options: {
     elementProp?: string;
     eventType?: 'input' | 'onChange';
-  }
+    key?: KeySelector<TValues, T>;
+    validator?: Validator<T, TValues>;
+    initialValue?: string | boolean;
+  } = {}
 ) => {
   const { eventType = 'input', elementProp = 'value' } = options;
-  const { setValue, subscribe } = useControl(formRef, options);
   const [touched, setTouched] = useState(false);
   const ref = useRef<HTMLInputElement | null>(null);
 
-  const key = getKey(options.key);
-  const errors = useErrors(formRef, [key]);
-  const error = touched ? errors[key] : null;
+  const [error, setError] = useState<string[] | null>(null);
+  const publicError = touched ? error : null;
 
   useEffect(() => {
     const element = ref.current;
     if (!element) {
       return;
     }
+    const { initialValue = '', validator } = options;
+    const key: string = options.key ? getKey(options.key) : element.name;
+    if (!key) {
+      console.error(
+        "An input is missing its key. Either supply it through useInput `key` option or through the input's name",
+        element,
+        { options }
+      );
+      return;
+    }
+    formRef.registerControl({
+      initialValue,
+      key,
+      validator,
+    });
 
-    const unsubscribe = subscribe(
-      value => ((element as any)[elementProp] = value)
+    const unsubscribe = formRef
+      .getControl(key)
+      .subscribe(value => ((element as any)[elementProp] = value));
+    const errorSub = getError$(formRef, [key]).subscribe(({ [key]: value }) =>
+      setError(value === 'pending' ? null : value)
     );
+
     const blurListener = () => setTouched(true);
     element.addEventListener('blur', blurListener);
-    const valueListener = (event: any) => setValue(event.target[elementProp]);
+    const valueListener = (event: any) =>
+      formRef.getControl(key).setValue(event.target[elementProp]);
     element.addEventListener(eventType, valueListener);
+
     return () => {
       unsubscribe();
+      errorSub.unsubscribe();
       element.removeEventListener('blur', blurListener);
       element.removeEventListener(eventType, valueListener);
     };
   });
 
-  return [ref, error] as const;
+  return [ref, publicError] as const;
 };
