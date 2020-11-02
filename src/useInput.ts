@@ -37,9 +37,11 @@ export const useInput = <TValues, T>(
       validator,
     });
 
-    const unsubscribe = formRef
-      .getControl(key)
-      .subscribe(value => ((element as any)[elementProp] = value));
+    const unsubscribe = formRef.getControl(key).subscribe(value => {
+      if ((element as any)[elementProp] !== value) {
+        (element as any)[elementProp] = value;
+      }
+    });
 
     const blurListener = () => formRef.getControl(key).touch();
     element.addEventListener('blur', blurListener);

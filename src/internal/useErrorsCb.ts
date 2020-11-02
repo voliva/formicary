@@ -15,7 +15,9 @@ const getError$ = <TValues>(
         Object.fromEntries(
           keys === 'all'
             ? Array.from(controls.entries())
-            : keys.map((key: string) => [key, controls.get(key)!] as const)
+            : keys
+                .filter(key => controls.has(key))
+                .map((key: string) => [key, controls.get(key)!] as const)
         )
       )
     ),
