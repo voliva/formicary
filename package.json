@@ -63,6 +63,7 @@
   "dependencies": {
     "@react-rxjs/core": "^0.6.0",
     "@react-rxjs/utils": "^0.3.0",
-    "rxjs": "^6.6.3"
+    "rxjs": "^6.6.3",
+    "rxjs-deep-subject": "^0.1.3"
   }
 }

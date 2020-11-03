@@ -1,13 +1,20 @@
 import { FormRef } from './internal/formRef';
-import { getKeys, KeysSelector } from './path';
+import { getKeys, KeysSelector, navigateDeepSubject } from './path';
 
 export const resetForm = <T>(
   formRef: FormRef<T>,
   keysSelector?: KeysSelector<T>
 ): void => {
+  const { values$, initialValues$ } = formRef;
   if (!keysSelector) {
-    return formRef.reset();
+    values$.next(initialValues$.getValue());
+    return;
   }
+
   const keys = getKeys(keysSelector);
-  keys.forEach(key => formRef.reset(key));
+  keys.forEach(key => {
+    const value$ = navigateDeepSubject(key, values$);
+    const initialValue$ = navigateDeepSubject(key, initialValues$);
+    value$.next(initialValue$.getValue());
+  });
 };

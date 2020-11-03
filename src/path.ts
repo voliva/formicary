@@ -1,8 +1,10 @@
+import { DeepSubject } from 'rxjs-deep-subject';
+
 export type KeySelector<TValues, T> = string | ((values: TValues) => T);
 export type KeysSelector<TValues> = string[] | ((values: TValues) => any[]);
 
 const path = Symbol('path');
-export const getKey = (keySelector: KeySelector<any, any>) => {
+export const getKey = (keySelector: KeySelector<any, any>): string => {
   if (typeof keySelector === 'string') return keySelector;
   const proxy = new Proxy({ path: '' }, getProxyHandler(false));
   const result = keySelector(proxy);
@@ -13,7 +15,40 @@ export const getKey = (keySelector: KeySelector<any, any>) => {
   }
   return result[path];
 };
-export const getKeys = (keysSelector: KeysSelector<any>) => {
+export const navigateDeepSubject = (
+  keySelector: KeySelector<any, any>,
+  subject: DeepSubject<any>
+) => {
+  if (typeof keySelector === 'string') {
+    const path = keySelector.split('.'); // TODO Arrays
+    let result = subject;
+    path.forEach(p => (result = result.getChild(p)));
+    return result;
+  }
+  const proxy = new Proxy(
+    { subject },
+    {
+      get: (target, prop, receiver) => {
+        if (prop === path) {
+          return target.subject;
+        }
+
+        target.subject = target.subject.getChild(prop);
+
+        return receiver;
+      },
+    }
+  );
+  const result = keySelector(proxy);
+  if (result !== proxy) {
+    throw new Error(
+      `You must return a value from the argument in the selector function`
+    );
+  }
+  return result[path] as DeepSubject<any>;
+};
+
+export const getKeys = (keysSelector: KeysSelector<any>): string[] => {
   if (typeof keysSelector === 'object') return keysSelector;
   const proxy = new Proxy({ path: '' }, getProxyHandler(true));
   const result = keysSelector(proxy);

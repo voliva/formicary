@@ -1,8 +1,8 @@
 import { FormRef } from './internal/formRef';
-import { getKey, KeySelector } from './path';
+import { KeySelector, navigateDeepSubject } from './path';
 
 export const setFieldValue = <TValues, T>(
   formRef: FormRef<TValues>,
   keySelector: KeySelector<TValues, T>,
   value: T
-) => formRef.getControl(getKey(keySelector)).setValue(value);
+) => navigateDeepSubject(keySelector, formRef.values$).next(value);

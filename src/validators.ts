@@ -1,27 +1,30 @@
 import { KeySelector } from './path';
 
-export type Validator<T, TValues = any> = (
+export type PureValidator<T> = (
+  value: T
+) => boolean | string[] | Promise<boolean | string[]>;
+export type FieldValidator<T, TValues = any> = (
   value: T,
   getValue: (key: KeySelector<TValues, T>) => any
 ) => boolean | string[] | Promise<boolean | string[]>;
 
 type ValidatorParam<T> = T | ((getValue: (key: string) => any) => T);
 
-export const isNumber: Validator<any> = value => {
+export const isNumber: PureValidator<any> = value => {
   if (isNaN(value)) {
     return ['Expected a number'];
   }
   return true;
 };
 
-export const isInteger: Validator<any> = value => {
+export const isInteger: PureValidator<any> = value => {
   if (parseInt(value) !== parseFloat(value)) {
     return ['Expected an integer'];
   }
   return true;
 };
 
-export const isRequired: Validator<any> = value =>
+export const isRequired: PureValidator<any> = value =>
   value != null && value !== '' ? true : ['required'];
 
 const parseNumericParam = (
@@ -36,7 +39,7 @@ const parseNumericParam = (
 
 export const isAtLeast = (
   threshold: string | ValidatorParam<number>
-): Validator<number> => (value, getValue) => {
+): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) < thresholdValue) {
     return ['Expected a value of at least ' + thresholdValue];
@@ -46,7 +49,7 @@ export const isAtLeast = (
 
 export const isGreaterThan = (
   threshold: string | ValidatorParam<number>
-): Validator<number> => (value, getValue) => {
+): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) <= thresholdValue) {
     return ['Expected a value greater than ' + thresholdValue];
@@ -56,7 +59,7 @@ export const isGreaterThan = (
 
 export const isAtMost = (
   threshold: string | ValidatorParam<number>
-): Validator<number> => (value, getValue) => {
+): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) > thresholdValue) {
     return ['Expected a value of at most ' + thresholdValue];
@@ -66,7 +69,7 @@ export const isAtMost = (
 
 export const isLessThan = (
   threshold: string | ValidatorParam<number>
-): Validator<number> => (value, getValue) => {
+): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) >= thresholdValue) {
     return ['Expected a value less than ' + thresholdValue];
@@ -77,27 +80,26 @@ export const isLessThan = (
 export const matches = (
   regex: RegExp,
   message?: string
-): Validator<string> => value => {
+): PureValidator<string> => value => {
   if (regex.test(value)) {
     return true;
   }
   return [message ?? 'Invalid value'];
 };
 
-const recPipeValidators = (
-  validators: Array<Validator<any>>,
-  i: number
-): Validator<any> => (value, getValue) => {
+const recPipeValidators = (validators: Array<any>, i: number): any => (
+  ...args: any
+) => {
   if (i >= validators.length) {
     return true;
   }
-  const syncResult = validators[i](value, getValue);
+  const syncResult = validators[i](...args);
 
   const processResult = (result: boolean | string[]) => {
     if (result !== true) {
       return result;
     }
-    return recPipeValidators(validators, i + 1)(value, getValue);
+    return recPipeValidators(validators, i + 1)(...args);
   };
 
   if (validationResultIsAsync(syncResult)) {
@@ -106,34 +108,38 @@ const recPipeValidators = (
   return processResult(syncResult);
 };
 
-export const pipeValidators = <TValue>(
-  ...validators: Array<Validator<any, TValue>>
-): Validator<any, TValue> => recPipeValidators(validators, 0);
+export const pipeValidators = <TValue, TFn extends FieldValidator<any, TValue>>(
+  ...validators: Array<TFn>
+): TFn => recPipeValidators(validators, 0);
 
-export const mergeValidators = <TValue>(
-  ...validators: Array<Validator<any, TValue>>
-): Validator<any, TValue> => (value, getValue) => {
-  const syncResults = validators.map(validate => validate(value, getValue));
+export const mergeValidators = <
+  TValue,
+  TFn extends FieldValidator<any, TValue>
+>(
+  ...validators: Array<TFn>
+): TFn =>
+  ((...args: any[]) => {
+    const syncResults = validators.map(validate => (validate as any)(...args));
 
-  const processResult = (results: (boolean | string[])[]) => {
-    const flattenedResults = results.flatMap(result =>
-      typeof result === 'boolean' ? [] : result
-    );
-    if (flattenedResults.length === 0) {
-      return !results.some(result => result === false);
+    const processResult = (results: (boolean | string[])[]) => {
+      const flattenedResults = results.flatMap(result =>
+        typeof result === 'boolean' ? [] : result
+      );
+      if (flattenedResults.length === 0) {
+        return !results.some(result => result === false);
+      }
+      return flattenedResults;
+    };
+
+    if (syncResults.some(validationResultIsAsync)) {
+      return Promise.all(syncResults).then(processResult);
     }
-    return flattenedResults;
-  };
+    return processResult(syncResults as any);
+  }) as any;
 
-  if (syncResults.some(validationResultIsAsync)) {
-    return Promise.all(syncResults).then(processResult);
-  }
-  return processResult(syncResults as any);
-};
-
-export const noopValidator: Validator<any> = () => true;
+export const noopValidator: PureValidator<any> = () => true;
 
 const validationResultIsAsync = (
-  result: ReturnType<Validator<any>>
+  result: ReturnType<FieldValidator<any>>
 ): result is Promise<any> =>
   typeof result === 'object' && !Array.isArray(result);

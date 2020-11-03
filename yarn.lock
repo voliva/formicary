@@ -7558,6 +7558,11 @@ run-queue@^1.0.0, run-queue@^1.0.3:
   dependencies:
     aproba "^1.1.1"
 
+rxjs-deep-subject@^0.1.3:
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/rxjs-deep-subject/-/rxjs-deep-subject-0.1.3.tgz#09c602a34f6564ac6319b73487894e9bff07028f"
+  integrity sha512-anaZfPPdjowoZKGcqtfrMmYWnuvbA8bhsGRILGjf3XZJtUn9OSreBV6lJ/lovSFmaNTvwS32gnm1C8HdexNwMg==
+
 rxjs@^6.6.0, rxjs@^6.6.3:
   version "6.6.3"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-6.6.3.tgz#8ca84635c4daa900c0d3967a6ee7ac60271ee552"
