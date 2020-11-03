@@ -1,4 +1,4 @@
-# React RxJS Form
+# Reactive Rx Form
 
 Build forms with reactive validations between forms and a composable API.
 
@@ -15,7 +15,7 @@ import {
   isAtMost,
   isRequired,
   errors,
-} from 'react-rxjs-form';
+} from 'reactive-rx-form';
 
 const Form = () => {
   const form = useForm<{
@@ -84,7 +84,7 @@ type Validator<T> = (
 ) => boolean | string[] | Promise<boolean | string[]>;
 ```
 
-React RxJS Form currently exposes some common validators to make things less verbose, but it's fairly simple to build your own validator:
+Reactive Rx Form currently exposes some common validators to make things less verbose, but it's fairly simple to build your own validator:
 
 - `value`: the latest value of the field.
 - `getValue`: Function to retrieve the latest value of a dependant field. This lets this library wire up all the dependencies.

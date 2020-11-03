@@ -1,5 +1,5 @@
 {
-  "version": "0.1.11",
+  "version": "0.1.0",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -28,20 +28,20 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "name": "react-rxjs-form",
+  "name": "reactive-rx-form",
   "author": "Víctor Oliva",
   "repository": {
     "type": "git",
-    "url": "https://github.com/voliva/react-rxjs-form.git"
+    "url": "https://github.com/voliva/reactive-rx-form.git"
   },
-  "module": "dist/react-rxjs-form.esm.js",
+  "module": "dist/reactive-rx-form.esm.js",
   "size-limit": [
     {
-      "path": "dist/react-rxjs-form.cjs.production.min.js",
+      "path": "dist/reactive-rx-form.cjs.production.min.js",
       "limit": "10 KB"
     },
     {
-      "path": "dist/react-rxjs-form.esm.js",
+      "path": "dist/reactive-rx-form.esm.js",
       "limit": "10 KB"
     }
   ],
