@@ -14,6 +14,8 @@ import {
   useIsPristine,
   useIsValid,
 } from '.././src';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 const Form = () => {
   const form = useForm<{
@@ -33,10 +35,15 @@ const Form = () => {
   const pristine = useIsPristine(form);
   const isValid = useIsValid(form);
 
+  const [showMax, setShowMax] = useState(false);
+  useEffect(() => {
+    setTimeout(() => setShowMax(true), 1000);
+  }, []);
+
   return (
     <div>
       <input name="min" placeholder="min" ref={minField} />
-      <input name="max" placeholder="max" ref={maxField} />
+      {showMax && <input name="max" placeholder="max" ref={maxField} />}
       <div>minErrors: {errors.min}</div>
       <div>maxErrors: {errors.max}</div>
       <div>Minimum: {min}</div>

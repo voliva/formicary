@@ -2,16 +2,16 @@ export { readForm } from './readForm';
 export { resetForm } from './resetForm';
 export { setFieldValue } from './setFieldValue';
 export { useControl } from './useControl';
+export { useControlState } from './useControlState';
 export { useErrors } from './useErrors';
 export { useForm } from './useForm';
-export { useFormValue } from './useFormValue';
 export { useInput } from './useInput';
 export { useIsPristine } from './useIsPristine';
 export { useIsValid } from './useIsValid';
 export { useWatch } from './useWatch';
 export { touchFields } from './touchFields';
 export {
-  Validator,
+  FieldValidator as Validator,
   isAtLeast,
   isGreaterThan,
   isInteger,

@@ -1,178 +1,242 @@
-import { bind, shareLatest } from '@react-rxjs/core';
-import { createListener } from '@react-rxjs/utils';
-import { combineLatest, Observable } from 'rxjs';
 import {
-  distinctUntilChanged,
-  filter,
+  BehaviorSubject,
+  combineLatest,
+  concat,
+  Observable,
+  of,
+  Subject,
+} from 'rxjs';
+import { deepSubject, DeepSubject } from 'rxjs-deep-subject';
+import {
   map,
-  scan,
-  startWith,
+  mergeMap,
+  shareReplay,
   switchMap,
-  take,
+  withLatestFrom,
 } from 'rxjs/operators';
-import { getKey } from '../path';
-import {
-  Control,
-  ControlOptions,
-  createControl,
-  SyncObservable,
-} from './control';
-import { getSyncValue } from './util';
+import { getKey, KeySelector, navigateDeepSubject } from '../path';
+import { FieldValidator, noopValidator } from '../validators';
+import { filterSeenValues } from './util';
 
-export interface FormRef<T extends Record<string, any>> {
-  registerControl: (options: ControlOptions<T, any>) => void;
-  getControl: (
-    key: string
-  ) => {
-    setValue: (value: any) => void;
-    touch: () => void;
-    subscribe: (cb: (value: any) => void) => () => void;
-  };
-  value$: Observable<Map<string, SyncObservable<any>>>;
-  error$: Observable<Map<string, Observable<boolean | string[] | 'pending'>>>;
-  touchedError$: Observable<
-    Map<string, Observable<boolean | string[] | 'pending'>>
-  >;
-  useIsPristine: () => boolean;
-  reset: (key?: string) => void;
+export interface ControlOptions<TValues, T> {
+  key: KeySelector<TValues, T>;
+  initialValue: T;
+  validator?: FieldValidator<T, TValues>;
+}
+
+export interface FormRef<TValues extends Record<string, any>> {
+  registeredKeys: BehaviorSubject<Set<string>>;
+  registerControl: (options: ControlOptions<TValues, any>) => void;
+  initialValues$: DeepSubject<TValues>;
+  values$: DeepSubject<TValues>;
+  /**
+   * Same structure as TValues, but every value is:
+   * {
+   *   touched: boolean,
+   *   errors: string[] | 'pending' | false
+   * }
+   */
+  controlStates$: DeepSubject<any>;
   dispose: () => void;
+}
+
+export interface FormRefOptions<TValue> {
+  initialValue?: TValue;
+}
+
+export type ErrorResult = string[] | 'pending' | false;
+export interface ControlState<T> {
+  touched: boolean;
+  validator: FieldValidator<T>;
+  error$: Observable<ErrorResult>;
 }
 
 export const createFormRef = <
   TValues extends Record<string, any> = Record<string, any>
->(): FormRef<TValues> => {
-  const [newControl$, registerControl] = createListener<
-    ControlOptions<TValues, any>
-  >();
+>(
+  options: {
+    initialValue?: TValues;
+  } = {}
+): FormRef<TValues> => {
+  const registeredKeys = new BehaviorSubject(new Set<string>());
+  const initialValues$ = deepSubject<TValues>(options.initialValue);
+  const values$ = deepSubject<TValues>(options.initialValue);
+  /**
+   * Same structure as TValues, but every value is a ControlState
+   */
+  const controlStates$ = deepSubject<any>();
 
-  const controls$ = newControl$.pipe(
-    scan((controls, controlUpdate$) => {
-      const key = getKey(controlUpdate$.key);
-      const control = controls.get(key);
-      if (control) {
-        control.replaceInitialValue(controlUpdate$.initialValue);
-        control.replaceValidator(controlUpdate$.validator);
-      } else {
-        controls.set(
+  const registerControl = ({
+    initialValue,
+    key: keySelector,
+    validator = noopValidator,
+  }: ControlOptions<TValues, any>) => {
+    const key = getKey(keySelector);
+    const control$ = navigateDeepSubject(key, controlStates$);
+    const value$ = navigateDeepSubject(key, values$);
+    if (!control$.hasValue()) {
+      const keys = registeredKeys.getValue();
+      keys.add(key);
+      registeredKeys.next(keys);
+      control$.next({
+        touched: false,
+        validator,
+        error$: createError$({
           key,
-          createControl(
-            {
-              ...controlUpdate$,
-              key,
-            },
-            key => controls.get(key)
-          )
-        );
-      }
-      return controls;
-    }, new Map<string, Control<TValues, any>>()),
-    startWith(new Map<string, Control<TValues, any>>()),
-    shareLatest()
-  );
-  const sub = controls$.subscribe();
+          validator$: control$.getChild('validator'),
+          value$,
+          getControlValue$: key => navigateDeepSubject(key, values$),
+        }),
+      });
+    }
 
-  const [useIsPristine] = bind(
-    controls$.pipe(
-      switchMap(controls =>
-        combineLatest(
-          Array.from(controls.values()).map(control => control.isPristine$)
-        ).pipe(map(pristines => pristines.every(p => p)))
-      )
-    ),
-    true
-  );
+    // Update validator
+    const validator$ = control$.getChild('validator');
+    if (validator !== validator$.getValue()) {
+      validator$.next(validator);
+    }
 
-  const reset = (key?: string) => {
-    controls$
-      .pipe(take(1))
-      .subscribe(controls =>
-        key
-          ? controls.get(key)?.reset()
-          : controls.forEach(control => control.reset())
-      );
+    // Update initial value
+    const initialValue$ = navigateDeepSubject(key, initialValues$);
+    if (
+      !initialValue$.hasValue() ||
+      initialValue$.getValue() !== initialValue
+    ) {
+      initialValue$.next(initialValue);
+    }
+
+    // If it doesn't have value, set it to initial value
+    if (!value$.hasValue()) {
+      value$.next(initialValue);
+    }
   };
 
   return {
+    registeredKeys,
     registerControl,
-    getControl: (key: string) => {
-      const control$ = controls$.pipe(
-        map(controls => controls.get(key)!),
-        filter(control => !!control),
-        take(1)
-      );
-
-      return {
-        setValue: (value: TValues) => {
-          try {
-            getSyncValue(control$).setValue(value);
-          } catch (ex) {
-            console.warn(
-              `Can't set value: Control "${key}" hasn't been registered yet.`
-            );
-          }
-        },
-        touch: () => {
-          try {
-            getSyncValue(control$).touch();
-          } catch (ex) {
-            console.warn(
-              `Couldn't touch: Control "${key}" hasn't been registered yet.`
-            );
-          }
-        },
-        subscribe: (cb: (value: TValues) => void) => {
-          const sub = control$
-            .pipe(switchMap(control => control.value$))
-            .subscribe(cb);
-          return () => {
-            sub.unsubscribe();
-          };
-        },
-      };
-    },
-    value$: controls$.pipe(
-      map(
-        control =>
-          new Map(
-            Array.from(control.entries()).map(
-              ([key, control]) => [key, control.value$] as const
-            )
-          )
-      )
-    ),
-    error$: controls$.pipe(
-      map(
-        control =>
-          new Map(
-            Array.from(control.entries()).map(
-              ([key, control]) => [key, control.error$] as const
-            )
-          )
-      )
-    ),
-    touchedError$: controls$.pipe(
-      map(
-        control =>
-          new Map(
-            Array.from(control.entries()).map(
-              ([key, control]) =>
-                [
-                  key,
-                  combineLatest([control.error$, control.isTouched$]).pipe(
-                    map(([errors, isTouched]) => (isTouched ? errors : true))
-                  ),
-                ] as const
-            )
-          )
-      )
-    ),
+    initialValues$,
+    controlStates$,
+    values$,
     dispose: () => {
-      controls$.pipe(take(1)).subscribe(controls => {
-        Array.from(controls.values()).forEach(control => control.dispose());
-      });
-      sub.unsubscribe();
+      initialValues$.complete();
+      values$.complete();
+      controlStates$.complete();
     },
-    useIsPristine,
-    reset,
   };
 };
+
+export const getControlState = <TValues, T>(
+  formRef: FormRef<TValues>,
+  key: KeySelector<TValues, T>
+): DeepSubject<ControlState<T>> =>
+  navigateDeepSubject(key, formRef.controlStates$);
+
+const createError$ = <T>(params: {
+  key: string;
+  validator$: Observable<FieldValidator<T>>;
+  value$: Observable<T>;
+  getControlValue$: (key: string) => DeepSubject<any>;
+}): Observable<ErrorResult> => {
+  const { key, validator$, value$, getControlValue$ } = params;
+  const dependency$ = new Subject<DeepSubject<any>>();
+
+  return combineLatest([
+    value$,
+    dependency$.pipe(
+      filterSeenValues(),
+      mergeMap(subject => subject.pipe(skipSynchronous())),
+      deferredStartWith(null)
+    ),
+  ]).pipe(
+    map(([value]) => value),
+    withLatestFrom(validator$), // Validator can't be put in `combineLatest` unless we force useMemo on validators
+    switchMap(([value, latestValidator]) => {
+      try {
+        const result = latestValidator(value, keySelector => {
+          const key = getKey(keySelector);
+          const targetControlValue$ = getControlValue$(key);
+
+          dependency$.next(targetControlValue$);
+          if (!targetControlValue$.hasValue()) {
+            throw new ValueNotThereYetError(key);
+          }
+          return targetControlValue$.getValue();
+        });
+        if (typeof result === 'boolean') {
+          return of<false | string[]>(result === true ? false : []);
+        }
+        if (Array.isArray(result)) {
+          return of(result);
+        }
+        return concat(
+          of('pending' as const),
+          result.then<false | string[]>(result =>
+            result === true ? false : result === false ? [] : result
+          )
+        );
+      } catch (ex) {
+        if (ex instanceof ValueNotThereYetError) {
+          console.warn(
+            `Setting control ${key} error to pending, as the validation depends on a field that hasn't been registered yet`,
+            ex
+          );
+        } else {
+          console.error(ex); // TODO how to propagate into an error boundary? :|
+        }
+        return of('pending' as const);
+      }
+    }),
+    shareReplay(1) // TODO doesnt work with shareLatest
+  );
+};
+
+class ValueNotThereYetError extends Error {
+  constructor(key: string) {
+    super(`Control ${key} doesn't have any value yet`);
+    this.name = 'ValueNotThereYetError';
+
+    Object.setPrototypeOf(this, ValueNotThereYetError.prototype);
+  }
+}
+
+const deferredStartWith = <T>(value: T) => (source: Observable<T>) =>
+  new Observable(subscriber => {
+    const initialSent = {
+      value: false,
+    };
+    const buffer: T[] = [];
+    const sub = source.subscribe({
+      next: v => {
+        if (initialSent.value) {
+          subscriber.next(v);
+        } else {
+          buffer.push(v);
+        }
+      },
+      error: e => subscriber.error(e),
+      complete: () => subscriber.complete(),
+    });
+    initialSent.value = true;
+
+    if (!subscriber.closed) {
+      subscriber.next(value);
+      for (let i = 0; i < buffer.length && !subscriber.closed; i++)
+        subscriber.next(buffer[i]);
+    }
+
+    return sub;
+  });
+
+const skipSynchronous = () => <T>(source: Observable<T>) =>
+  new Observable<T>(subscriber => {
+    const state = {
+      skip: true,
+    };
+    const sub = source.subscribe({
+      next: v => (state.skip ? void 0 : subscriber.next(v)),
+      error: e => subscriber.error(e),
+      complete: () => subscriber.complete(),
+    });
+    state.skip = false;
+    return sub;
+  });

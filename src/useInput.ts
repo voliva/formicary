@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { FormRef } from './internal/formRef';
-import { getKey, KeySelector } from './path';
-import { Validator } from './validators';
+import { FormRef, getControlState } from './internal/formRef';
+import { getKey, KeySelector, navigateDeepSubject } from './path';
+import { FieldValidator } from './validators';
 
 export const useInput = <TValues, T>(
   formRef: FormRef<TValues>,
@@ -9,7 +9,7 @@ export const useInput = <TValues, T>(
     elementProp?: string;
     eventType?: 'input' | 'onChange';
     key?: KeySelector<TValues, T>;
-    validator?: Validator<T, TValues>;
+    validator?: FieldValidator<T, TValues>;
     initialValue?: string | boolean;
   } = {}
 ) => {
@@ -37,20 +37,24 @@ export const useInput = <TValues, T>(
       validator,
     });
 
-    const unsubscribe = formRef.getControl(key).subscribe(value => {
+    const value$ = navigateDeepSubject(key, formRef.values$);
+    const valueSub = value$.subscribe(value => {
       if ((element as any)[elementProp] !== value) {
         (element as any)[elementProp] = value;
       }
     });
 
-    const blurListener = () => formRef.getControl(key).touch();
+    const blurListener = () =>
+      getControlState(formRef, key)
+        .getChild('touched')
+        .next(true);
     element.addEventListener('blur', blurListener);
     const valueListener = (event: any) =>
-      formRef.getControl(key).setValue(event.target[elementProp]);
+      value$.next(event.target[elementProp]);
     element.addEventListener(eventType, valueListener);
 
     return () => {
-      unsubscribe();
+      valueSub.unsubscribe();
       element.removeEventListener('blur', blurListener);
       element.removeEventListener(eventType, valueListener);
     };
