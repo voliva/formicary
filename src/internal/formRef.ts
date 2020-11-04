@@ -1,4 +1,3 @@
-import { shareLatest } from '@react-rxjs/core';
 import {
   BehaviorSubject,
   combineLatest,
@@ -11,9 +10,10 @@ import { deepSubject, DeepSubject } from 'rxjs-deep-subject';
 import {
   map,
   mergeMap,
+  shareReplay,
   skip,
-  startWith,
   switchMap,
+  tap,
   withLatestFrom,
 } from 'rxjs/operators';
 import { getKey, KeySelector, navigateDeepSubject } from '../path';
@@ -82,13 +82,13 @@ export const createFormRef = <
       keys.add(key);
       registeredKeys.next(keys);
       control$.next({
-        touched: true,
+        touched: false,
         validator,
         error$: createError$({
           key,
           validator$: control$.getChild('validator'),
           value$,
-          getControlValue$: key => navigateDeepSubject(key, value$),
+          getControlValue$: key => navigateDeepSubject(key, values$),
         }),
       });
     }
@@ -147,8 +147,8 @@ const createError$ = <T>(params: {
     value$,
     dependency$.pipe(
       filterSeenValues(),
-      mergeMap(subject => subject.pipe(skip(1))),
-      startWith(null)
+      mergeMap(subject => subject.pipe(skipSynchronous())),
+      deferredStartWith(null)
     ),
   ]).pipe(
     map(([value]) => value),
@@ -183,14 +183,13 @@ const createError$ = <T>(params: {
             `Setting control ${key} error to pending, as the validation depends on a field that hasn't been registered yet`,
             ex
           );
-          // TODO but the dependency is lost! i.e. when the dependency comes live, we won't re-evaluate.
         } else {
           console.error(ex); // TODO how to propagate into an error boundary? :|
         }
         return of('pending' as const);
       }
     }),
-    shareLatest()
+    shareReplay(1) // TODO doesnt work with shareLatest
   );
 };
 
@@ -202,3 +201,45 @@ class ValueNotThereYetError extends Error {
     Object.setPrototypeOf(this, ValueNotThereYetError.prototype);
   }
 }
+
+const deferredStartWith = <T>(value: T) => (source: Observable<T>) =>
+  new Observable(subscriber => {
+    const initialSent = {
+      value: false,
+    };
+    const buffer: T[] = [];
+    const sub = source.subscribe({
+      next: v => {
+        if (initialSent.value) {
+          subscriber.next(v);
+        } else {
+          buffer.push(v);
+        }
+      },
+      error: e => subscriber.error(e),
+      complete: () => subscriber.complete(),
+    });
+    initialSent.value = true;
+
+    if (!subscriber.closed) {
+      subscriber.next(value);
+      for (let i = 0; i < buffer.length && !subscriber.closed; i++)
+        subscriber.next(buffer[i]);
+    }
+
+    return sub;
+  });
+
+const skipSynchronous = () => <T>(source: Observable<T>) =>
+  new Observable<T>(subscriber => {
+    const state = {
+      skip: true,
+    };
+    const sub = source.subscribe({
+      next: v => (state.skip ? void 0 : subscriber.next(v)),
+      error: e => subscriber.error(e),
+      complete: () => subscriber.complete(),
+    });
+    state.skip = false;
+    return sub;
+  });

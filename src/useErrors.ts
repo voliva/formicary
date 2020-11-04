@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { merge, of } from 'rxjs';
-import { map, scan, switchMap } from 'rxjs/operators';
+import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
 import { ErrorResult, FormRef, getControlState } from './internal/formRef';
 import { getKeys, KeysSelector } from './path';
 
@@ -25,18 +25,25 @@ export const useErrors = <TValues>(
               switchMap(v =>
                 v.touched
                   ? v.error$.pipe(map(payload => ({ key, payload })))
-                  : of<{ key: string; payload: false }>({ key, payload: false })
+                  : of<{ key: string; payload: false }>({
+                      key,
+                      payload: false,
+                    })
               )
             )
           )
         ).pipe(
           scan(
-            (old, { key, payload }) => ({
-              ...old,
-              [key]: payload,
-            }),
+            (old, { key, payload }) =>
+              old[key] === payload
+                ? old
+                : {
+                    ...old,
+                    [key]: payload,
+                  },
             {} as Record<string, ErrorResult>
-          )
+          ),
+          distinctUntilChanged()
         )
       )
     );
@@ -47,6 +54,7 @@ export const useErrors = <TValues>(
     const sub = error$.subscribe(setErrors);
     return () => sub.unsubscribe();
   }, [error$]);
+  console.log({ errors });
 
   return errors;
 };

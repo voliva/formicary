@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { merge, of } from 'rxjs';
-import { map, scan, switchMap } from 'rxjs/operators';
+import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
 import { ErrorResult, FormRef, getControlState } from './internal/formRef';
 import { getKeys, KeysSelector } from './path';
 
@@ -27,12 +27,16 @@ export const useIsValid = <TValues>(
           )
         ).pipe(
           scan(
-            (old, { key, payload }) => ({
-              ...old,
-              [key]: payload,
-            }),
+            (old, { key, payload }) =>
+              old[key] === payload
+                ? old
+                : {
+                    ...old,
+                    [key]: payload,
+                  },
             {} as Record<string, ErrorResult>
-          )
+          ),
+          distinctUntilChanged()
         )
       )
     );
@@ -50,7 +54,7 @@ export const useIsValid = <TValues>(
               hasPending = true;
               return false;
             }
-            return true;
+            return Boolean(error);
           });
           return hasError ? false : hasPending ? 'pending' : true;
         })
