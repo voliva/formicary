@@ -11,13 +11,11 @@ import {
   map,
   mergeMap,
   shareReplay,
-  skip,
   switchMap,
-  tap,
   withLatestFrom,
 } from 'rxjs/operators';
 import { getKey, KeySelector, navigateDeepSubject } from '../path';
-import { FieldValidator, noopValidator, PureValidator } from '../validators';
+import { FieldValidator, noopValidator } from '../validators';
 import { filterSeenValues } from './util';
 
 export interface ControlOptions<TValues, T> {
@@ -44,7 +42,6 @@ export interface FormRef<TValues extends Record<string, any>> {
 
 export interface FormRefOptions<TValue> {
   initialValue?: TValue;
-  validator?: PureValidator<TValue>;
 }
 
 export type ErrorResult = string[] | 'pending' | false;

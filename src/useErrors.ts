@@ -10,7 +10,9 @@ export const useErrors = <TValues>(
   keysSelector?: KeysSelector<TValues>
 ) => {
   const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
-  const [errors, setErrors] = useState<Record<string, ErrorResult>>({});
+  const [errors, setErrors] = useState<
+    Record<string, Exclude<ErrorResult, false>>
+  >({});
 
   const error$ = useMemo(() => {
     const keys$ =
@@ -33,16 +35,21 @@ export const useErrors = <TValues>(
             )
           )
         ).pipe(
-          scan(
-            (old, { key, payload }) =>
-              old[key] === payload
-                ? old
-                : {
-                    ...old,
-                    [key]: payload,
-                  },
-            {} as Record<string, ErrorResult>
-          ),
+          scan((old, { key, payload }) => {
+            if (payload === false) {
+              if (key in old) {
+                const { [key]: _, ...newValue } = old;
+                return newValue;
+              }
+              return old;
+            }
+            return old[key] === payload
+              ? old
+              : {
+                  ...old,
+                  [key]: payload,
+                };
+          }, {} as Record<string, Exclude<ErrorResult, false>>),
           distinctUntilChanged()
         )
       )
@@ -54,7 +61,6 @@ export const useErrors = <TValues>(
     const sub = error$.subscribe(setErrors);
     return () => sub.unsubscribe();
   }, [error$]);
-  console.log({ errors });
 
   return errors;
 };

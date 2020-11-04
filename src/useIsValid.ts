@@ -26,16 +26,21 @@ export const useIsValid = <TValues>(
             )
           )
         ).pipe(
-          scan(
-            (old, { key, payload }) =>
-              old[key] === payload
-                ? old
-                : {
-                    ...old,
-                    [key]: payload,
-                  },
-            {} as Record<string, ErrorResult>
-          ),
+          scan((old, { key, payload }) => {
+            if (payload === false) {
+              if (key in old) {
+                const { [key]: _, ...newValue } = old;
+                return newValue;
+              }
+              return old;
+            }
+            return old[key] === payload
+              ? old
+              : {
+                  ...old,
+                  [key]: payload,
+                };
+          }, {} as Record<string, Exclude<ErrorResult, false>>),
           distinctUntilChanged()
         )
       )
@@ -54,7 +59,7 @@ export const useIsValid = <TValues>(
               hasPending = true;
               return false;
             }
-            return Boolean(error);
+            return true;
           });
           return hasError ? false : hasPending ? 'pending' : true;
         })

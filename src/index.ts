@@ -2,6 +2,7 @@ export { readForm } from './readForm';
 export { resetForm } from './resetForm';
 export { setFieldValue } from './setFieldValue';
 export { useControl } from './useControl';
+export { useControlState } from './useControlState';
 export { useErrors } from './useErrors';
 export { useForm } from './useForm';
 export { useInput } from './useInput';

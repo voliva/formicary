@@ -1,33 +1,32 @@
-import * as React from 'react';
-import { isNumber, pipeValidators, useForm } from '../src';
-import { act, render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/extend-expect';
+import { render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import * as React from 'react';
+import { isNumber, pipeValidators, useErrors, useForm, useInput } from '../src';
 import { isAtMost } from '../src/validators';
 
 const Form = () => {
-  const { register, errors } = useForm<{
+  const form = useForm<{
     min: number;
     max: number;
-  }>({
-    onSubmit: () => {},
-  });
+  }>();
+  const errors = useErrors(form);
 
   return (
     <div>
       <input
         placeholder="min"
-        ref={register({
+        ref={useInput(form, {
           key: v => v.min,
-          initialValue: 0,
+          initialValue: '0',
           validator: pipeValidators(isNumber, isAtMost('max')),
         })}
       />
       <input
         placeholder="max"
-        ref={register({
-          key: v => v.max,
-          initialValue: 10,
+        name="max"
+        ref={useInput(form, {
+          initialValue: '10',
           validator: isNumber,
         })}
       />
@@ -49,6 +48,7 @@ describe('useForm', () => {
 
     expect(getByTestId('errors')).toHaveTextContent('');
     userEvent.type(getByPlaceholderText('min'), '12');
+    userEvent.tab();
     expect(getByTestId('errors')).toHaveTextContent('min');
   });
 
@@ -57,6 +57,7 @@ describe('useForm', () => {
 
     expect(getByTestId('errors')).toHaveTextContent('');
     userEvent.type(getByPlaceholderText('min'), '12');
+    userEvent.tab();
     expect(getByTestId('errors')).toHaveTextContent('min');
     userEvent.type(getByPlaceholderText('max'), '15');
     expect(getByTestId('errors')).toHaveTextContent('');

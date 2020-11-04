@@ -108,34 +108,36 @@ const recPipeValidators = (validators: Array<any>, i: number): any => (
   return processResult(syncResult);
 };
 
-export const pipeValidators = <TValue, TFn extends FieldValidator<any, TValue>>(
-  ...validators: Array<TFn>
-): TFn => recPipeValidators(validators, 0);
+interface ValidatorComposer {
+  (...validators: Array<PureValidator<any>>): PureValidator<any>;
+  <TValues>(...validators: Array<FieldValidator<any, TValues>>): FieldValidator<
+    any,
+    TValues
+  >;
+}
+export const pipeValidators: ValidatorComposer = (...validators: any[]) =>
+  recPipeValidators(validators, 0);
 
-export const mergeValidators = <
-  TValue,
-  TFn extends FieldValidator<any, TValue>
->(
-  ...validators: Array<TFn>
-): TFn =>
-  ((...args: any[]) => {
-    const syncResults = validators.map(validate => (validate as any)(...args));
+export const mergeValidators: ValidatorComposer = (...validators: any[]) => (
+  ...args: any[]
+) => {
+  const syncResults = validators.map(validate => (validate as any)(...args));
 
-    const processResult = (results: (boolean | string[])[]) => {
-      const flattenedResults = results.flatMap(result =>
-        typeof result === 'boolean' ? [] : result
-      );
-      if (flattenedResults.length === 0) {
-        return !results.some(result => result === false);
-      }
-      return flattenedResults;
-    };
-
-    if (syncResults.some(validationResultIsAsync)) {
-      return Promise.all(syncResults).then(processResult);
+  const processResult = (results: (boolean | string[])[]) => {
+    const flattenedResults = results.flatMap(result =>
+      typeof result === 'boolean' ? [] : result
+    );
+    if (flattenedResults.length === 0) {
+      return !results.some(result => result === false);
     }
-    return processResult(syncResults as any);
-  }) as any;
+    return flattenedResults;
+  };
+
+  if (syncResults.some(validationResultIsAsync)) {
+    return Promise.all(syncResults).then(processResult);
+  }
+  return processResult(syncResults as any);
+};
 
 export const noopValidator: PureValidator<any> = () => true;
 
