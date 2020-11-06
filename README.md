@@ -1,6 +1,6 @@
-# Reactive Rx Form
+# Formicary
 
-Build forms with reactive validations between forms and a composable API.
+Build react forms with reactive validations between forms and a composable API.
 
 Experimental
 
@@ -15,7 +15,7 @@ import {
   isAtMost,
   isRequired,
   errors,
-} from 'reactive-rx-form';
+} from 'formicary';
 
 const Form = () => {
   const form = useForm<{
@@ -84,7 +84,7 @@ type Validator<T> = (
 ) => boolean | string[] | Promise<boolean | string[]>;
 ```
 
-Reactive Rx Form currently exposes some common validators to make things less verbose, but it's fairly simple to build your own validator:
+Formicary currently exposes some common validators to make things less verbose, but it's fairly simple to build your own validator:
 
 - `value`: the latest value of the field.
 - `getValue`: Function to retrieve the latest value of a dependant field. This lets this library wire up all the dependencies.

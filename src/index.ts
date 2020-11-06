@@ -1,6 +1,7 @@
 export { readForm } from './readForm';
 export { resetForm } from './resetForm';
 export { setFieldValue } from './setFieldValue';
+export { setInitialValue } from './setInitialValue';
 export { useControl } from './useControl';
 export { useControlState } from './useControlState';
 export { useErrors } from './useErrors';
