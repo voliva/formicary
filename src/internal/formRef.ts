@@ -9,12 +9,15 @@ import {
 import { deepSubject, DeepSubject } from 'rxjs-deep-subject';
 import {
   map,
+  mapTo,
   mergeMap,
   shareReplay,
+  skip,
+  startWith,
   switchMap,
   withLatestFrom,
 } from 'rxjs/operators';
-import { getKey, KeySelector, navigateDeepSubject } from '../path';
+import { getKey, KeySelector, navigateDeepSubject } from './path';
 import { FieldValidator, noopValidator } from '../validators';
 import { filterSeenValues } from './util';
 
@@ -48,6 +51,7 @@ export type ErrorResult = string[] | 'pending' | false;
 export interface ControlState<T> {
   touched: boolean;
   validator: FieldValidator<T>;
+  manualError: Subject<ErrorResult>;
   error$: Observable<ErrorResult>;
 }
 
@@ -72,19 +76,24 @@ export const createFormRef = <
     validator = noopValidator,
   }: ControlOptions<TValues, any>) => {
     const key = getKey(keySelector);
-    const control$ = navigateDeepSubject(key, controlStates$);
+    const control$ = navigateDeepSubject(key, controlStates$) as DeepSubject<
+      ControlState<any>
+    >;
     const value$ = navigateDeepSubject(key, values$);
     if (!control$.hasValue()) {
       const keys = registeredKeys.getValue();
       keys.add(key);
       registeredKeys.next(keys);
+      const manualError = new Subject<ErrorResult>();
       control$.next({
         touched: false,
         validator,
+        manualError,
         error$: createError$({
           key,
           validator$: control$.getChild('validator'),
           value$,
+          manualError$: manualError.asObservable(),
           getControlValue$: key => navigateDeepSubject(key, values$),
         }),
       });
@@ -135,12 +144,13 @@ const createError$ = <T>(params: {
   key: string;
   validator$: Observable<FieldValidator<T>>;
   value$: Observable<T>;
+  manualError$: Observable<ErrorResult>; // Assuming hot observable
   getControlValue$: (key: string) => DeepSubject<any>;
 }): Observable<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
   const dependency$ = new Subject<DeepSubject<any>>();
 
-  return combineLatest([
+  const validatorError$ = combineLatest([
     value$,
     dependency$.pipe(
       filterSeenValues(),
@@ -185,8 +195,27 @@ const createError$ = <T>(params: {
         }
         return of('pending' as const);
       }
-    }),
-    shareReplay(1) // TODO doesnt work with shareLatest
+    })
+  );
+
+  const manualError$ = params.manualError$.pipe(
+    switchMap(v =>
+      concat(of(v), value$.pipe(skipSynchronous(), mapTo(false as const)))
+    ),
+    startWith(false as const)
+  );
+
+  return combineLatest([validatorError$, manualError$]).pipe(
+    map(
+      ([validatorResult, manualResult]): ErrorResult => {
+        if (manualResult === false || manualResult === 'pending')
+          return validatorResult;
+        if (validatorResult === false || validatorResult === 'pending')
+          return manualResult;
+        return [...manualResult, ...validatorResult];
+      }
+    ),
+    shareReplay(1) // TODO doesnt work with shareLatest - It receives many unsubscriptions+resubscriptions
   );
 };
 

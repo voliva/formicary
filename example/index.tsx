@@ -13,6 +13,7 @@ import {
   useErrors,
   useIsPristine,
   useIsValid,
+  setFieldError,
 } from '.././src';
 import { useState } from 'react';
 import { useEffect } from 'react';
@@ -51,7 +52,11 @@ const Form = () => {
       <div>{isValid ? 'valid' : 'invalid'}</div>
       <button
         onClick={() => {
-          console.log(readForm(form));
+          const value = readForm(form);
+          console.log(value);
+          setFieldError(form, v => v.max, [
+            `value ${value.max} is invalid (trololo)`,
+          ]);
         }}
       >
         Submit
