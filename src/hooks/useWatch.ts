@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FormRef } from './internal/formRef';
-import { KeySelector, navigateDeepSubject } from './path';
+import { FormRef } from '../internal/formRef';
+import { KeySelector, navigateDeepSubject } from '../internal/path';
 
 export function useWatch<TValues, T>(
   formRef: FormRef<TValues>,

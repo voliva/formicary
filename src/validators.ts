@@ -1,4 +1,4 @@
-import { KeySelector } from './path';
+import { KeySelector } from './internal/path';
 
 export type PureValidator<T> = (
   value: T

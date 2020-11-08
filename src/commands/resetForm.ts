@@ -1,5 +1,5 @@
-import { FormRef, getControlState } from './internal/formRef';
-import { getKeys, KeysSelector, navigateDeepSubject } from './path';
+import { FormRef, getControlState } from '../internal/formRef';
+import { getKeys, KeysSelector, navigateDeepSubject } from '../internal/path';
 
 export const resetForm = <T>(
   formRef: FormRef<T>,

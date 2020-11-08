@@ -1,5 +1,5 @@
-import { FormRef } from './internal/formRef';
-import { KeySelector, navigateDeepSubject } from './path';
+import { FormRef } from '../internal/formRef';
+import { KeySelector, navigateDeepSubject } from '../internal/path';
 
 export const setFieldValue = <TValues, T>(
   formRef: FormRef<TValues>,

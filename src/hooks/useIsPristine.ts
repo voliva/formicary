@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { combineLatest } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
-import { FormRef } from './internal/formRef';
-import { navigateDeepSubject } from './path';
+import { FormRef } from '../internal/formRef';
+import { navigateDeepSubject } from '../internal/path';
 
 export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
   const [isPristine, setIsPristine] = useState<boolean>(true);

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { merge, of } from 'rxjs';
 import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
-import { ErrorResult, FormRef, getControlState } from './internal/formRef';
-import { getKeys, KeysSelector } from './path';
+import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
+import { getKeys, KeysSelector } from '../internal/path';
 
 const ALL_KEYS = {};
 export const useErrors = <TValues>(

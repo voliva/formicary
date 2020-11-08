@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { FormRef, getControlState } from './internal/formRef';
-import { getKey, KeySelector, navigateDeepSubject } from './path';
-import { FieldValidator } from './validators';
+import { FormRef, getControlState } from '../internal/formRef';
+import { getKey, KeySelector, navigateDeepSubject } from '../internal/path';
+import { FieldValidator } from '../validators';
 
 export const useInput = <TValues, T>(
   formRef: FormRef<TValues>,

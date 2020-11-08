@@ -1,16 +1,17 @@
-export { readForm } from './readForm';
-export { resetForm } from './resetForm';
-export { setFieldValue } from './setFieldValue';
-export { setInitialValue } from './setInitialValue';
-export { useControl } from './useControl';
-export { useControlState } from './useControlState';
-export { useErrors } from './useErrors';
-export { useForm } from './useForm';
-export { useInput } from './useInput';
-export { useIsPristine } from './useIsPristine';
-export { useIsValid } from './useIsValid';
-export { useWatch } from './useWatch';
-export { touchFields } from './touchFields';
+export { readForm } from './commands/readForm';
+export { resetForm } from './commands/resetForm';
+export { setFieldValue } from './commands/setFieldValue';
+export { setInitialValue } from './commands/setInitialValue';
+export { touchFields } from './commands/touchFields';
+export { setFieldError } from './commands/setFieldError';
+export { useControlSubscription } from './hooks/useControlSubscription';
+export { useControl } from './hooks/useControl';
+export { useErrors } from './hooks/useErrors';
+export { useForm } from './hooks/useForm';
+export { useInput } from './hooks/useInput';
+export { useIsPristine } from './hooks/useIsPristine';
+export { useIsValid } from './hooks/useIsValid';
+export { useWatch } from './hooks/useWatch';
 export {
   FieldValidator as Validator,
   isAtLeast,

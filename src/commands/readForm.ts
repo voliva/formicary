@@ -1,4 +1,4 @@
-import { FormRef } from './internal/formRef';
+import { FormRef } from '../internal/formRef';
 
 export const readForm = <T>(formRef: FormRef<T>): T => {
   try {

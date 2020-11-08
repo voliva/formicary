@@ -1,10 +1,10 @@
-import React, { FC } from 'react';
-import { useForm } from './useForm';
-import { useInput } from './useInput';
-import { readForm } from './readForm';
 import { render } from '@testing-library/react';
 import { renderHook } from '@testing-library/react-hooks';
 import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { useForm } from '../hooks/useForm';
+import { useInput } from '../hooks/useInput';
+import { readForm } from './readForm';
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
   const form = useForm({

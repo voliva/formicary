@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { FormRef, getControlState, ControlOptions } from './internal/formRef';
-import { getKey, navigateDeepSubject } from './path';
+import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
+import { getKey, navigateDeepSubject } from '../internal/path';
 
-export const useControl = <TValues, T>(
+export const useControlSubscription = <TValues, T>(
   formRef: FormRef<TValues>,
   options: ControlOptions<TValues, T>
 ) => {
