@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -67,6 +67,6 @@
     "@react-rxjs/core": "^0.6.0",
     "@react-rxjs/utils": "^0.3.0",
     "rxjs": "^6.6.3",
-    "rxjs-deep-subject": "^0.1.5"
+    "rxjs-deep-subject": "^0.1.6"
   }
 }
