@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { merge, of } from 'rxjs';
-import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
 import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
 import { getKeys, KeysSelector } from '../internal/path';
+import {
+  combine,
+  distinctUntilChanged,
+  map,
+  ObservableState,
+  pipe,
+  switchMap,
+  take,
+} from '../observables';
 
 const ALL_KEYS = {};
 export const useErrors = <TValues>(
   formRef: FormRef<TValues>,
   keysSelector?: KeysSelector<TValues>
 ) => {
-  const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
+  const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
   const [errors, setErrors] = useState<
     Record<string, Exclude<ErrorResult, false>>
   >({});
@@ -17,50 +24,43 @@ export const useErrors = <TValues>(
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
-        ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
-        : of(keys as string[]);
-    const result = keys$.pipe(
-      switchMap(keys =>
-        merge(
-          ...keys.map(key =>
-            getControlState(formRef, key).pipe(
-              switchMap(v =>
-                v.touched
-                  ? v.error$.pipe(map(payload => ({ key, payload })))
-                  : of<{ key: string; payload: false }>({
-                      key,
-                      payload: false,
-                    })
-              )
-            )
+        ? pipe(
+            formRef.registeredKeys,
+            map(set => Array.from(set))
           )
-        ).pipe(
-          scan((old, { key, payload }) => {
-            if (payload === false) {
-              if (key in old) {
-                const { [key]: _, ...newValue } = old;
-                return newValue;
-              }
-              return old;
-            }
-            return old[key] === payload
-              ? old
-              : {
-                  ...old,
-                  [key]: payload,
-                };
-          }, {} as Record<string, Exclude<ErrorResult, false>>),
-          distinctUntilChanged()
+        : new ObservableState(keys);
+
+    return pipe(
+      keys$,
+      switchMap(keys =>
+        combine(
+          Object.fromEntries(
+            keys.map(key => [
+              key,
+              pipe(
+                getControlState(formRef, key),
+                map(v => (v.touched ? v.error$ : FALSE)),
+                distinctUntilChanged(),
+                switchMap(v => v)
+              ),
+            ])
+          )
+        )
+      ),
+      map(results =>
+        Object.fromEntries(
+          Object.entries(results).filter(([, value]) => value !== false) as [
+            string,
+            Exclude<ErrorResult, false>
+          ][]
         )
       )
     );
-    return result;
   }, [formRef, ...keys]);
 
-  useEffect(() => {
-    const sub = error$.subscribe(setErrors);
-    return () => sub.unsubscribe();
-  }, [error$]);
+  useEffect(() => error$.subscribe(x => setErrors(() => x)), [error$]);
 
   return errors;
 };
+
+const FALSE = new ObservableState(false as false);

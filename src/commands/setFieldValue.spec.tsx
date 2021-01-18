@@ -1,12 +1,11 @@
 import { render } from '@testing-library/react';
-import { renderHook } from '@testing-library/react-hooks';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { useForm } from '../hooks/useForm';
 import { useInput } from '../hooks/useInput';
 import { useIsValid } from '../hooks/useIsValid';
 import { readForm } from './readForm';
-import { setFieldValue } from './setFieldValue';
+import { setFieldValue, setFormValue } from './setFieldValue';
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
   const form = useForm({
@@ -34,7 +33,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
         data-testid="setMultiple"
         type="button"
         onClick={() =>
-          setFieldValue(form, v => v, {
+          setFormValue(form, {
             nested: {
               value: 'multiple set 0',
             },
@@ -46,7 +45,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
         data-testid="setMultipleIgnore"
         type="button"
         onClick={() =>
-          setFieldValue(form, v => v, {
+          setFormValue(form, {
             nested: {
               value: 'ignoring some',
             },

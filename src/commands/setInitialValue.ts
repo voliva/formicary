@@ -1,8 +1,14 @@
 import { FormRef } from '../internal/formRef';
-import { KeySelector, navigateDeepSubject } from '../internal/path';
+import { KeySelector, getMapValue } from '../internal/path';
+import { ObservableState } from '../observables';
 
 export const setInitialValue = <TValues, T>(
   formRef: FormRef<TValues>,
   keySelector: KeySelector<TValues, T>,
   value: T
-) => navigateDeepSubject(keySelector, formRef.initialValues$).next(value);
+) =>
+  getMapValue(
+    keySelector,
+    formRef.initialValues,
+    () => new ObservableState()
+  ).setState(value);

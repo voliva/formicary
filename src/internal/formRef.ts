@@ -1,25 +1,20 @@
 import {
-  BehaviorSubject,
-  combineLatest,
-  concat,
-  Observable,
-  of,
-  Subject,
-} from 'rxjs';
-import { deepSubject, DeepSubject } from 'rxjs-deep-subject';
-import {
+  asEvent,
+  combine,
+  DerivedObservable,
+  distinctUntilChanged,
+  EventSubject,
   map,
-  mapTo,
-  mergeMap,
-  shareReplay,
-  skip,
-  startWith,
-  switchMap,
-  withLatestFrom,
-} from 'rxjs/operators';
-import { getKey, KeySelector, navigateDeepSubject } from './path';
+  ObservableEvent,
+  ObservableState,
+  ObservableValue,
+  pipe,
+  skipSynchronous,
+  take,
+  withDefault,
+} from '../observables';
 import { FieldValidator, noopValidator } from '../validators';
-import { filterSeenValues } from './util';
+import { getKey, getKeyValues, getMapValue, KeySelector } from './path';
 
 export interface ControlOptions<TValues, T> {
   key: KeySelector<TValues, T>;
@@ -28,18 +23,11 @@ export interface ControlOptions<TValues, T> {
 }
 
 export interface FormRef<TValues extends Record<string, any>> {
-  registeredKeys: BehaviorSubject<Set<string>>;
+  registeredKeys: ObservableState<Set<string>>;
   registerControl: (options: ControlOptions<TValues, any>) => void;
-  initialValues$: DeepSubject<TValues>;
-  values$: DeepSubject<TValues>;
-  /**
-   * Same structure as TValues, but every value is:
-   * {
-   *   touched: boolean,
-   *   errors: string[] | 'pending' | false
-   * }
-   */
-  controlStates$: DeepSubject<any>;
+  initialValues: Map<string, ObservableState<any>>;
+  values: Map<string, ObservableState<any>>;
+  controlStates: Map<string, ObservableState<ControlState<any>>>;
   dispose: () => void;
 }
 
@@ -51,8 +39,8 @@ export type ErrorResult = string[] | 'pending' | false;
 export interface ControlState<T> {
   touched: boolean;
   validator: FieldValidator<T>;
-  manualError: Subject<ErrorResult>;
-  error$: Observable<ErrorResult>;
+  manualError: EventSubject<ErrorResult>;
+  error$: ObservableValue<ErrorResult>;
 }
 
 export const createFormRef = <
@@ -62,13 +50,27 @@ export const createFormRef = <
     initialValue?: TValues;
   } = {}
 ): FormRef<TValues> => {
-  const registeredKeys = new BehaviorSubject(new Set<string>());
-  const initialValues$ = deepSubject<TValues>(options.initialValue);
-  const values$ = deepSubject<TValues>(options.initialValue);
+  const registeredKeys = new ObservableState(new Set<string>());
+  const initialValues = new Map<string, ObservableState<any>>();
+  Object.entries(getKeyValues(options.initialValue || {})).forEach(
+    ([key, value]) => {
+      initialValues.set(key, new ObservableState(value));
+    }
+  );
+
+  const values = new Map(
+    Array.from(initialValues.entries()).map(
+      ([key, subject]) =>
+        [key, new ObservableState(subject.getState())] as const
+    )
+  );
   /**
    * Same structure as TValues, but every value is a ControlState
    */
-  const controlStates$ = deepSubject<any>();
+  const controlStates = new Map<string, ObservableState<ControlState<any>>>();
+
+  const getControlValue$ = (key: string) =>
+    getMapValue(key, values, () => new ObservableState());
 
   const registerControl = ({
     initialValue,
@@ -76,60 +78,77 @@ export const createFormRef = <
     validator = noopValidator,
   }: ControlOptions<TValues, any>) => {
     const key = getKey(keySelector);
-    const control$ = navigateDeepSubject(key, controlStates$) as DeepSubject<
-      ControlState<any>
-    >;
-    const value$ = navigateDeepSubject(key, values$);
+    const value$ = getControlValue$(key);
+    const control$: ObservableState<ControlState<any>> = getMapValue(
+      key,
+      controlStates,
+      () => new ObservableState()
+    );
     if (!control$.hasValue()) {
-      const keys = registeredKeys.getValue();
+      const keys = registeredKeys.getState();
       keys.add(key);
-      registeredKeys.next(keys);
-      const manualError = new Subject<ErrorResult>();
-      control$.next({
+      registeredKeys.setState(keys);
+      const manualError = new EventSubject<ErrorResult>();
+      control$.setState({
         touched: false,
         validator,
         manualError,
         error$: createError$({
           key,
-          validator$: control$.getChild('validator'),
+          validator$: pipe(
+            control$,
+            map(control => control.validator),
+            withDefault(validator),
+            distinctUntilChanged()
+          ),
           value$,
-          manualError$: manualError.asObservable(),
-          getControlValue$: key => navigateDeepSubject(key, values$),
+          manualError$: manualError,
+          getControlValue$,
         }),
       });
     }
 
     // Update validator
-    const validator$ = control$.getChild('validator');
-    if (validator !== validator$.getValue()) {
-      validator$.next(validator);
+    if (validator !== control$.getState().validator) {
+      control$.setState({
+        ...control$.getState(),
+        validator,
+      });
     }
 
     // Update initial value
-    const initialValue$ = navigateDeepSubject(key, initialValues$);
+    const initialValue$ = getMapValue(
+      key,
+      initialValues,
+      () => new ObservableState(initialValue)
+    );
     if (
       !initialValue$.hasValue() ||
-      initialValue$.getValue() !== initialValue
+      initialValue$.getState() !== initialValue
     ) {
-      initialValue$.next(initialValue);
+      initialValue$.setState(initialValue);
     }
 
     // If it doesn't have value, set it to initial value
-    if (!value$.hasValue()) {
-      value$.next(initialValue);
+    const valueSource$ = getMapValue(key, values, () => new ObservableState());
+    if (!valueSource$.hasValue()) {
+      valueSource$.setState(initialValue);
     }
   };
 
   return {
     registeredKeys,
     registerControl,
-    initialValues$,
-    controlStates$,
-    values$,
+    initialValues,
+    controlStates,
+    values,
     dispose: () => {
-      initialValues$.complete();
-      values$.complete();
-      controlStates$.complete();
+      // [...initialValues.values()].forEach(subject => subject.complete());
+      // [...values.values()].forEach(subject => subject.complete());
+      // [...controlStates.values()].forEach(subject => subject.complete());
+      initialValues.clear();
+      values.clear();
+      controlStates.clear();
     },
   };
 };
@@ -137,52 +156,64 @@ export const createFormRef = <
 export const getControlState = <TValues, T>(
   formRef: FormRef<TValues>,
   key: KeySelector<TValues, T>
-): DeepSubject<ControlState<T>> =>
-  navigateDeepSubject(key, formRef.controlStates$);
+) =>
+  getMapValue(
+    key,
+    formRef.controlStates,
+    () => new ObservableState()
+  ) as ObservableState<ControlState<T>>;
 
 const createError$ = <T>(params: {
   key: string;
-  validator$: Observable<FieldValidator<T>>;
-  value$: Observable<T>;
-  manualError$: Observable<ErrorResult>; // Assuming hot observable
-  getControlValue$: (key: string) => DeepSubject<any>;
-}): Observable<ErrorResult> => {
+  validator$: ObservableValue<FieldValidator<T>>;
+  value$: ObservableValue<T>;
+  manualError$: ObservableEvent<ErrorResult>;
+  getControlValue$: (key: string) => ObservableValue<any>;
+}): ObservableValue<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
-  const dependency$ = new Subject<DeepSubject<any>>();
 
-  const validatorError$ = combineLatest([
-    value$,
-    dependency$.pipe(
-      filterSeenValues(),
-      mergeMap(subject => subject.pipe(skipSynchronous())),
-      deferredStartWith(null)
-    ),
-  ]).pipe(
-    map(([value]) => value),
-    withLatestFrom(validator$), // Validator can't be put in `combineLatest` unless we force useMemo on validators
-    switchMap(([value, latestValidator]) => {
+  const validationError$ = new DerivedObservable<ErrorResult>(next => {
+    const dependenciesObserved = new Set<ObservableValue<any>>();
+
+    let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
+    validator$.subscribe(v => (latestValidator = v));
+
+    let latestValue: T | typeof EMPTY = EMPTY;
+    value$.subscribe(v => {
+      latestValue = v;
+      runValidator();
+    });
+
+    function runValidator() {
+      if (latestValidator === EMPTY) {
+        throw new Error('No validator defined'); // TODO shouldn't ever happen
+      }
+      if (latestValue === EMPTY) {
+        throw new Error('No validator defined'); // TODO shouldn't ever happen
+      }
       try {
-        const result = latestValidator(value, keySelector => {
+        const result = latestValidator(latestValue, keySelector => {
           const key = getKey(keySelector);
           const targetControlValue$ = getControlValue$(key);
 
-          dependency$.next(targetControlValue$);
+          if (!dependenciesObserved.has(targetControlValue$)) {
+            dependenciesObserved.add(targetControlValue$);
+            asEvent(targetControlValue$).subscribe(runValidator);
+          }
           if (!targetControlValue$.hasValue()) {
             throw new ValueNotThereYetError(key);
           }
-          return targetControlValue$.getValue();
+          return targetControlValue$.getState();
         });
         if (typeof result === 'boolean') {
-          return of<false | string[]>(result === true ? false : []);
+          return next(result === true ? false : []);
         }
         if (Array.isArray(result)) {
-          return of(result);
+          return next(result);
         }
-        return concat(
-          of('pending' as const),
-          result.then<false | string[]>(result =>
-            result === true ? false : result === false ? [] : result
-          )
+        next('pending');
+        result.then(result =>
+          next(result === true ? false : result === false ? [] : result)
         );
       } catch (ex) {
         if (ex instanceof ValueNotThereYetError) {
@@ -193,29 +224,40 @@ const createError$ = <T>(params: {
         } else {
           console.error(ex); // TODO how to propagate into an error boundary? :|
         }
-        return of('pending' as const);
+        return next('pending' as const);
       }
+    }
+  });
+
+  const manualError$ = new DerivedObservable<ErrorResult>(next => {
+    next(false);
+    let innerUnsub = (): void => void 0;
+    return params.manualError$.subscribe(error => {
+      next(error);
+      innerUnsub();
+      innerUnsub = pipe(
+        value$,
+        skipSynchronous(),
+        take(1),
+        map(() => false as false)
+      ).subscribe(next);
+    });
+  });
+
+  const errors = combine({
+    validatorResult: validationError$,
+    manualResult: manualError$,
+  });
+
+  return pipe(
+    errors,
+    map(({ validatorResult, manualResult }) => {
+      if (manualResult === false || manualResult === 'pending')
+        return validatorResult;
+      if (validatorResult === false || validatorResult === 'pending')
+        return manualResult;
+      return [...manualResult, ...validatorResult];
     })
-  );
-
-  const manualError$ = params.manualError$.pipe(
-    switchMap(v =>
-      concat(of(v), value$.pipe(skipSynchronous(), mapTo(false as const)))
-    ),
-    startWith(false as const)
-  );
-
-  return combineLatest([validatorError$, manualError$]).pipe(
-    map(
-      ([validatorResult, manualResult]): ErrorResult => {
-        if (manualResult === false || manualResult === 'pending')
-          return validatorResult;
-        if (validatorResult === false || validatorResult === 'pending')
-          return manualResult;
-        return [...manualResult, ...validatorResult];
-      }
-    ),
-    shareReplay(1) // TODO doesnt work with shareLatest - It receives many unsubscriptions+resubscriptions
   );
 };
 
@@ -228,44 +270,4 @@ class ValueNotThereYetError extends Error {
   }
 }
 
-const deferredStartWith = <T>(value: T) => (source: Observable<T>) =>
-  new Observable(subscriber => {
-    const initialSent = {
-      value: false,
-    };
-    const buffer: T[] = [];
-    const sub = source.subscribe({
-      next: v => {
-        if (initialSent.value) {
-          subscriber.next(v);
-        } else {
-          buffer.push(v);
-        }
-      },
-      error: e => subscriber.error(e),
-      complete: () => subscriber.complete(),
-    });
-    initialSent.value = true;
-
-    if (!subscriber.closed) {
-      subscriber.next(value);
-      for (let i = 0; i < buffer.length && !subscriber.closed; i++)
-        subscriber.next(buffer[i]);
-    }
-
-    return sub;
-  });
-
-const skipSynchronous = () => <T>(source: Observable<T>) =>
-  new Observable<T>(subscriber => {
-    const state = {
-      skip: true,
-    };
-    const sub = source.subscribe({
-      next: v => (state.skip ? void 0 : subscriber.next(v)),
-      error: e => subscriber.error(e),
-      complete: () => subscriber.complete(),
-    });
-    state.skip = false;
-    return sub;
-  });
+const EMPTY = Symbol('empty');

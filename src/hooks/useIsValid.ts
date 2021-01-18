@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { merge, of } from 'rxjs';
-import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
 import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
 import { getKeys, KeysSelector } from '../internal/path';
+import {
+  combine,
+  map,
+  ObservableState,
+  pipe,
+  switchMap,
+  take,
+} from '../observables';
 
 const ALL_KEYS = {};
 export const useIsValid = <TValues>(
@@ -10,47 +16,48 @@ export const useIsValid = <TValues>(
   defaultValue: boolean = false,
   keysSelector?: KeysSelector<TValues>
 ) => {
-  const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
+  const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
 
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
-        ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
-        : of(keys as string[]);
-    const result = keys$.pipe(
-      switchMap(keys =>
-        merge(
-          ...keys.map(key =>
-            getControlState(formRef, key).pipe(
-              switchMap(v => v.error$.pipe(map(payload => ({ key, payload }))))
-            )
+        ? pipe(
+            formRef.registeredKeys,
+            map(set => Array.from(set))
           )
-        ).pipe(
-          scan((old, { key, payload }) => {
-            if (payload === false) {
-              if (key in old) {
-                const { [key]: _, ...newValue } = old;
-                return newValue;
-              }
-              return old;
-            }
-            return old[key] === payload
-              ? old
-              : {
-                  ...old,
-                  [key]: payload,
-                };
-          }, {} as Record<string, Exclude<ErrorResult, false>>),
-          distinctUntilChanged()
+        : new ObservableState(keys);
+
+    return pipe(
+      keys$,
+      switchMap(keys =>
+        combine(
+          Object.fromEntries(
+            keys.map(key => [
+              key,
+              pipe(
+                getControlState(formRef, key),
+                take(1),
+                switchMap(v => v.error$)
+              ),
+            ])
+          )
+        )
+      ),
+      map(results =>
+        Object.fromEntries(
+          Object.entries(results).filter(([, value]) => value !== false) as [
+            string,
+            Exclude<ErrorResult, false>
+          ][]
         )
       )
     );
-    return result;
   }, [formRef, ...keys]);
 
   const isValid$ = useMemo(
     () =>
-      error$.pipe(
+      pipe(
+        error$,
         map(errors => {
           const errorValues = Object.values(errors);
           let hasPending = false;
@@ -68,16 +75,15 @@ export const useIsValid = <TValues>(
   );
 
   const [isValid, setIsValid] = useState<boolean | 'pending'>(() => {
-    let value: boolean | 'pending' = defaultValue;
-    const sub = isValid$.subscribe(v => (value = v as any));
-    sub.unsubscribe();
-    return value;
+    if (isValid$.hasValue()) {
+      return isValid$.getState();
+    }
+    return defaultValue; // TODO does it ever happen?
   });
 
-  useEffect(() => {
-    const sub = isValid$.subscribe(setIsValid);
-    return () => sub.unsubscribe();
-  }, [isValid$]);
+  useEffect(() => isValid$.subscribe(setIsValid), [isValid$]);
 
   return isValid;
 };
+
+const FALSE = new ObservableState(false as false);

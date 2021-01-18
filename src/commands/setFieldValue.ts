@@ -1,30 +1,27 @@
 import { FormRef } from '../internal/formRef';
-import { KeySelector, navigateDeepSubject } from '../internal/path';
+import { KeySelector, getMapValue, getKeyValues } from '../internal/path';
+import { ObservableState } from '../observables';
 
 export const setFieldValue = <TValues, T>(
   formRef: FormRef<TValues>,
   keySelector: KeySelector<TValues, T>,
   value: T
 ) => {
-  const value$ = navigateDeepSubject(keySelector, formRef.values$);
+  const value$ = getMapValue(
+    keySelector,
+    formRef.values,
+    () => new ObservableState()
+  );
+  value$.setState(value);
+};
 
-  if (
-    value$ === formRef.values$ &&
-    typeof value === 'object' &&
-    value !== null
-  ) {
-    const keys = value$.getKeys();
-    const autofill = {} as any;
-    keys.forEach(key => {
-      if (value$.getChild(key).hasValue())
-        autofill[key] = value$.getChild(key).getValue();
-    });
-    value$.next({
-      ...autofill,
-      ...value,
-    });
-    return;
-  }
-
-  value$.next(value);
+export const setFormValue = <TValues, T>(
+  formRef: FormRef<TValues>,
+  value: T
+) => {
+  Object.entries(getKeyValues(value)).forEach(([key, value]) => {
+    getMapValue(key, formRef.values, () => new ObservableState()).setState(
+      value
+    );
+  });
 };

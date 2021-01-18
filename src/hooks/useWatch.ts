@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { FormRef } from '../internal/formRef';
-import { KeySelector, navigateDeepSubject } from '../internal/path';
+import { KeySelector, getMapValue } from '../internal/path';
+import { ObservableState } from '../observables';
 
 export function useWatch<TValues, T>(
   formRef: FormRef<TValues>,
   keySelector: KeySelector<TValues, T>
 ): T | undefined {
-  const [value, setValue] = useState<T | undefined>(undefined);
-  const value$ = navigateDeepSubject(keySelector, formRef.values$);
+  const value$ = getMapValue(
+    keySelector,
+    formRef.values,
+    () => new ObservableState()
+  );
+  const [value, setValue] = useState<T | undefined>(() => {
+    if (value$.hasValue()) {
+      return value$.getState();
+    }
+    return undefined;
+  });
 
-  useEffect(() => {
-    const sub = value$.subscribe(setValue);
-    return () => sub.unsubscribe();
-  }, [value$]);
+  useEffect(() => value$.subscribe(setValue), [value$]);
 
   return value;
 }

@@ -1,29 +1,24 @@
 import { FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector, navigateDeepSubject } from '../internal/path';
+import { getKeys, KeysSelector } from '../internal/path';
 
 export const resetForm = <T>(
   formRef: FormRef<T>,
   keysSelector?: KeysSelector<T>
 ): void => {
-  const { values$, initialValues$, registeredKeys } = formRef;
-  if (!keysSelector) {
-    values$.next(initialValues$.getValue());
-    registeredKeys.getValue().forEach(key => {
-      getControlState(formRef, key)
-        .getChild('touched')
-        .next(false);
-    });
-    return;
-  }
+  const { values, initialValues } = formRef;
 
-  const keys = getKeys(keysSelector);
+  const keys = keysSelector ? getKeys(keysSelector) : Array.from(values.keys());
   keys.forEach(key => {
-    const value$ = navigateDeepSubject(key, values$);
-    const initialValue$ = navigateDeepSubject(key, initialValues$);
-    value$.next(initialValue$.getValue());
-
-    getControlState(formRef, key)
-      .getChild('touched')
-      .next(false);
+    if (!values.has(key) || !initialValues.has(key)) {
+      return;
+    }
+    values.get(key)!.setState(initialValues.get(key)!.getState());
+    const control = getControlState(formRef, key);
+    if (control.getState().touched) {
+      control.setState({
+        ...control.getState(),
+        touched: false,
+      });
+    }
   });
 };

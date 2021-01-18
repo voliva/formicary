@@ -1,5 +1,3 @@
-import { DeepSubject } from 'rxjs-deep-subject';
-
 export type KeySelector<TValues, T> = string | ((values: TValues) => T);
 export type KeysSelector<TValues> = string[] | ((values: TValues) => any[]);
 
@@ -15,37 +13,16 @@ export const getKey = (keySelector: KeySelector<any, any>): string => {
   }
   return result[path];
 };
-export const navigateDeepSubject = (
+export const getMapValue = <T>(
   keySelector: KeySelector<any, any>,
-  subject: DeepSubject<any>
+  map: Map<string, T>,
+  defaultValue: () => T
 ) => {
-  if (typeof keySelector === 'string') {
-    const path = keySelector.split('.'); // TODO Arrays
-    let result = subject;
-    path.forEach(p => (result = result.getChild(p)));
-    return result;
+  const key = getKey(keySelector);
+  if (!map.has(key)) {
+    map.set(key, defaultValue());
   }
-  const proxy = new Proxy(
-    { subject },
-    {
-      get: (target, prop, receiver) => {
-        if (prop === path) {
-          return target.subject;
-        }
-
-        target.subject = target.subject.getChild(prop);
-
-        return receiver;
-      },
-    }
-  );
-  const result = keySelector(proxy);
-  if (result !== proxy) {
-    throw new Error(
-      `You must return a value from the argument in the selector function`
-    );
-  }
-  return result[path] as DeepSubject<any>;
+  return map.get(key)!;
 };
 
 export const getKeys = (keysSelector: KeysSelector<any>): string[] => {
@@ -58,6 +35,33 @@ export const getKeys = (keysSelector: KeysSelector<any>): string[] => {
   //   );
   // }
   return result.map(r => r[path]);
+};
+
+export const getKeyValues = (input: any) => {
+  const result: Record<string, any> = {};
+  if (!input) {
+    return result;
+  }
+
+  if (typeof input !== 'object') {
+    throw new Error('Model must be an object');
+  }
+  const prefix = Array.isArray(input)
+    ? (k: string) => `[${k}]`
+    : (k: string) => k;
+  Object.entries(input).forEach(([key, value]) => {
+    if (isPlainObject(value) || Array.isArray(value)) {
+      const inner = getKeyValues(value);
+      Object.entries(inner).forEach(([innerKey, innerValue]) => {
+        const chain = innerKey.startsWith('[') ? '' : '.';
+        result[prefix(key) + chain + innerKey] = innerValue;
+      });
+    } else {
+      result[prefix(key)] = value;
+    }
+  });
+
+  return result;
 };
 
 export const buildObject = (propValues: Record<string, any>) => {
@@ -157,3 +161,8 @@ const getProxyHandler = (
   };
   return handler;
 };
+
+const isPlainObject = (value: any) =>
+  value !== null &&
+  typeof value === 'object' &&
+  value.__proto__ === Object.prototype;
