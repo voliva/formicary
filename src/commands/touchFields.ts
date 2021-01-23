@@ -8,12 +8,12 @@ export const touchFields = <TValues>(
 ) => {
   const keys = keysSelector
     ? getKeys(keysSelector)
-    : formRef.registeredKeys.getState();
+    : formRef.registeredKeys.getValue();
   keys.forEach((key: string) => {
     const control$ = getControlState(formRef, key);
-    if (control$.getState().touched !== touch) {
-      control$.setState({
-        ...control$.getState(),
+    if (control$.getValue().touched !== touch) {
+      control$.setValue({
+        ...control$.getValue(),
         touched: touch,
       });
     }

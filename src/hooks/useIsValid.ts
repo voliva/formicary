@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector } from '../internal/path';
 import {
   combine,
   map,
-  ObservableState,
   pipe,
+  State,
   switchMap,
   take,
   withDefault,
-} from '../observables';
+} from 'derive-state';
+import { useEffect, useMemo, useState } from 'react';
+import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
+import { getKeys, KeysSelector } from '../internal/path';
 
 const ALL_KEYS = {};
 export const useIsValid = <TValues>(
@@ -26,7 +26,7 @@ export const useIsValid = <TValues>(
             formRef.registeredKeys,
             map(set => Array.from(set))
           )
-        : new ObservableState(keys);
+        : new State(keys);
 
     return pipe(
       keys$,
@@ -78,7 +78,7 @@ export const useIsValid = <TValues>(
 
   const [isValid, setIsValid] = useState<boolean | 'pending'>(() => {
     if (isValid$.hasValue()) {
-      return isValid$.getState();
+      return isValid$.getValue();
     }
     return defaultValue; // TODO does it ever happen? - It did: that's why I need to pass in a default value above
   });

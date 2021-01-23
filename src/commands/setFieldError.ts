@@ -8,7 +8,7 @@ export const setFieldError = <TValues>(
 ) => {
   try {
     getControlState(formRef, keySelector)
-      .getState()
+      .getValue()
       .manualError.emit(error);
   } catch (ex) {
     console.warn("Can't set error: Field not registered", ex);

@@ -12,11 +12,11 @@ export const resetForm = <T>(
     if (!values.has(key) || !initialValues.has(key)) {
       return;
     }
-    values.get(key)!.setState(initialValues.get(key)!.getState());
+    values.get(key)!.setValue(initialValues.get(key)!.getValue());
     const control = getControlState(formRef, key);
-    if (control.getState().touched) {
-      control.setState({
-        ...control.getState(),
+    if (control.getValue().touched) {
+      control.setValue({
+        ...control.getValue(),
         touched: false,
       });
     }

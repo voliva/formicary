@@ -1,3 +1,4 @@
+import { State } from 'derive-state';
 import { isSubfield } from './subfield';
 
 export type KeySelector<TValues, T> = string | ((values: TValues) => T);
@@ -15,14 +16,13 @@ export const getKey = (keySelector: KeySelector<any, any>): string => {
   }
   return result[path];
 };
-export const getMapValue = <T>(
+export const getMapValue = (
   keySelector: KeySelector<any, any>,
-  map: Map<string, T>,
-  defaultValue: () => T
+  map: Map<string, State<any>>
 ) => {
   const key = getKey(keySelector);
   if (!map.has(key)) {
-    map.set(key, defaultValue());
+    map.set(key, new State<any>());
   }
   return map.get(key)!;
 };

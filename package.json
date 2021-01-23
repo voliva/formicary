@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0-alpha.5",
+  "version": "0.2.0-alpha.6",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -63,5 +63,7 @@
     "tslib": "^2.0.3",
     "typescript": "^4.0.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "derive-state": "^0.1.0-alpha.0"
+  }
 }

@@ -1,18 +1,18 @@
 import {
-  asEvent,
+  asStateless,
   combine,
-  DerivedObservable,
+  DerivedState,
   distinctUntilChanged,
-  EventSubject,
   map,
-  ObservableEvent,
+  Observable,
   ObservableState,
-  ObservableValue,
   pipe,
   skipSynchronous,
+  State,
+  Stateless,
   take,
   withDefault,
-} from '../observables';
+} from 'derive-state';
 import { FieldValidator, noopValidator } from '../validators';
 import { getKey, getKeyValues, getMapValue, KeySelector } from './path';
 
@@ -23,11 +23,11 @@ export interface ControlOptions<TValues, T> {
 }
 
 export interface FormRef<TValues extends Record<string, any>> {
-  registeredKeys: ObservableState<Set<string>>;
+  registeredKeys: State<Set<string>>;
   registerControl: (options: ControlOptions<TValues, any>) => void;
-  initialValues: Map<string, ObservableState<any>>;
-  values: Map<string, ObservableState<any>>;
-  controlStates: Map<string, ObservableState<ControlState<any>>>;
+  initialValues: Map<string, State<any>>;
+  values: Map<string, State<any>>;
+  controlStates: Map<string, State<ControlState<any>>>;
   dispose: () => void;
 }
 
@@ -39,8 +39,8 @@ export type ErrorResult = string[] | 'pending' | false;
 export interface ControlState<T> {
   touched: boolean;
   validator: FieldValidator<T>;
-  manualError: EventSubject<ErrorResult>;
-  error$: ObservableValue<ErrorResult>;
+  manualError: Stateless<ErrorResult>;
+  error$: ObservableState<ErrorResult>;
 }
 
 export const createFormRef = <
@@ -50,27 +50,25 @@ export const createFormRef = <
     initialValue?: TValues;
   } = {}
 ): FormRef<TValues> => {
-  const registeredKeys = new ObservableState(new Set<string>());
-  const initialValues = new Map<string, ObservableState<any>>();
+  const registeredKeys = new State(new Set<string>());
+  const initialValues = new Map<string, State<any>>();
   Object.entries(getKeyValues(options.initialValue || {})).forEach(
     ([key, value]) => {
-      initialValues.set(key, new ObservableState(value));
+      initialValues.set(key, new State(value));
     }
   );
 
   const values = new Map(
     Array.from(initialValues.entries()).map(
-      ([key, subject]) =>
-        [key, new ObservableState(subject.getState())] as const
+      ([key, subject]) => [key, new State(subject.getValue())] as const
     )
   );
   /**
    * Same structure as TValues, but every value is a ControlState
    */
-  const controlStates = new Map<string, ObservableState<ControlState<any>>>();
+  const controlStates = new Map<string, State<ControlState<any>>>();
 
-  const getControlValue$ = (key: string) =>
-    getMapValue(key, values, () => new ObservableState());
+  const getControlValue$ = (key: string) => getMapValue(key, values);
 
   const registerControl = ({
     initialValue,
@@ -79,17 +77,13 @@ export const createFormRef = <
   }: ControlOptions<TValues, any>) => {
     const key = getKey(keySelector);
     const value$ = getControlValue$(key);
-    const control$: ObservableState<ControlState<any>> = getMapValue(
-      key,
-      controlStates,
-      () => new ObservableState()
-    );
+    const control$: State<ControlState<any>> = getMapValue(key, controlStates);
     if (!control$.hasValue()) {
-      const keys = registeredKeys.getState();
+      const keys = registeredKeys.getValue();
       keys.add(key);
-      registeredKeys.setState(keys);
-      const manualError = new EventSubject<ErrorResult>();
-      control$.setState({
+      registeredKeys.setValue(keys);
+      const manualError = new Stateless<ErrorResult>();
+      control$.setValue({
         touched: false,
         validator,
         manualError,
@@ -109,30 +103,26 @@ export const createFormRef = <
     }
 
     // Update validator
-    if (validator !== control$.getState().validator) {
-      control$.setState({
-        ...control$.getState(),
+    if (validator !== control$.getValue().validator) {
+      control$.setValue({
+        ...control$.getValue(),
         validator,
       });
     }
 
     // Update initial value
-    const initialValue$ = getMapValue(
-      key,
-      initialValues,
-      () => new ObservableState(initialValue)
-    );
+    const initialValue$ = getMapValue(key, initialValues);
     if (
       !initialValue$.hasValue() ||
-      initialValue$.getState() !== initialValue
+      initialValue$.getValue() !== initialValue
     ) {
-      initialValue$.setState(initialValue);
+      initialValue$.setValue(initialValue);
     }
 
     // If it doesn't have value, set it to initial value
-    const valueSource$ = getMapValue(key, values, () => new ObservableState());
+    const valueSource$ = getMapValue(key, values);
     if (!valueSource$.hasValue()) {
-      valueSource$.setState(initialValue);
+      valueSource$.setValue(initialValue);
     }
   };
 
@@ -156,24 +146,19 @@ export const createFormRef = <
 export const getControlState = <TValues, T>(
   formRef: FormRef<TValues>,
   key: KeySelector<TValues, T>
-) =>
-  getMapValue(
-    key,
-    formRef.controlStates,
-    () => new ObservableState()
-  ) as ObservableState<ControlState<T>>;
+) => getMapValue(key, formRef.controlStates) as State<ControlState<T>>;
 
 const createError$ = <T>(params: {
   key: string;
-  validator$: ObservableValue<FieldValidator<T>>;
-  value$: ObservableValue<T>;
-  manualError$: ObservableEvent<ErrorResult>;
-  getControlValue$: (key: string) => ObservableValue<any>;
-}): ObservableValue<ErrorResult> => {
+  validator$: ObservableState<FieldValidator<T>>;
+  value$: ObservableState<T>;
+  manualError$: Observable<ErrorResult>;
+  getControlValue$: (key: string) => ObservableState<any>;
+}): ObservableState<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
 
-  const validationError$ = new DerivedObservable<ErrorResult>(next => {
-    const dependenciesObserved = new Set<ObservableValue<any>>();
+  const validationError$ = new DerivedState<ErrorResult>(next => {
+    const dependenciesObserved = new Set<ObservableState<any>>();
 
     let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
     validator$.subscribe(v => (latestValidator = v));
@@ -198,12 +183,12 @@ const createError$ = <T>(params: {
 
           if (!dependenciesObserved.has(targetControlValue$)) {
             dependenciesObserved.add(targetControlValue$);
-            asEvent(targetControlValue$).subscribe(runValidator);
+            asStateless(targetControlValue$).subscribe(runValidator);
           }
           if (!targetControlValue$.hasValue()) {
             throw new ValueNotThereYetError(key);
           }
-          return targetControlValue$.getState();
+          return targetControlValue$.getValue();
         });
         if (typeof result === 'boolean') {
           return next(result === true ? false : []);
@@ -229,7 +214,7 @@ const createError$ = <T>(params: {
     }
   });
 
-  const manualError$ = new DerivedObservable<ErrorResult>(next => {
+  const manualError$ = new DerivedState<ErrorResult>(next => {
     next(false);
     let innerUnsub = (): void => void 0;
     return params.manualError$.subscribe(error => {

@@ -1,6 +1,5 @@
 import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
 import { getKey, getMapValue } from '../internal/path';
-import { getValue, ObservableState } from '../observables';
 
 export const useControlSubscription = <TValues, T>(
   formRef: FormRef<TValues>,
@@ -10,23 +9,18 @@ export const useControlSubscription = <TValues, T>(
   formRef.registerControl(options);
 
   return {
-    getValue: () =>
-      getMapValue(key, formRef.values, () => new ObservableState()).getState(),
-    setValue: (value: T) =>
-      getMapValue(key, formRef.values, () => new ObservableState()).setState(
-        value
-      ),
+    getValue: () => getMapValue(key, formRef.values).getValue(),
+    setValue: (value: T) => getMapValue(key, formRef.values).setValue(value),
     subscribe: (cb: (value: T) => void) =>
-      getMapValue(key, formRef.values, () => new ObservableState()).subscribe(
-        cb
-      ),
-    touch: async () => {
+      getMapValue(key, formRef.values).subscribe(cb),
+    touch: () => {
       const state$ = getControlState(formRef, key);
-      await getValue(state$);
-      if (state$.getState().touched) return;
-      state$.setState({
-        ...state$.getState(),
-        touched: true,
+      state$.value.then(() => {
+        if (state$.getValue().touched) return;
+        state$.setValue({
+          ...state$.getValue(),
+          touched: true,
+        });
       });
     },
   };

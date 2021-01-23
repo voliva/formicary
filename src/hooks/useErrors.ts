@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector } from '../internal/path';
 import {
   combine,
   distinctUntilChanged,
   map,
-  ObservableState,
   pipe,
+  State,
   switchMap,
-  take,
   withDefault,
-} from '../observables';
+} from 'derive-state';
+import { useEffect, useMemo, useState } from 'react';
+import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
+import { getKeys, KeysSelector } from '../internal/path';
 
 const ALL_KEYS = {};
 export const useErrors = <TValues>(
@@ -25,7 +24,7 @@ export const useErrors = <TValues>(
             formRef.registeredKeys,
             map(set => Array.from(set))
           )
-        : new ObservableState(keys);
+        : new State(keys);
 
     return pipe(
       keys$,
@@ -60,7 +59,7 @@ export const useErrors = <TValues>(
     Record<string, Exclude<ErrorResult, false>>
   >(() => {
     if (error$.hasValue()) {
-      return error$.getState();
+      return error$.getValue();
     }
     return {}; // TODO does this ever happen? - It did: that's why I need to pass in a default value above
   });
@@ -70,4 +69,4 @@ export const useErrors = <TValues>(
   return errors;
 };
 
-const FALSE = new ObservableState(false as false);
+const FALSE = new State(false as false);

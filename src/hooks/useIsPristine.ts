@@ -5,10 +5,9 @@ import {
   combine,
   distinctUntilChanged,
   map,
-  ObservableState,
   pipe,
   switchMap,
-} from '../observables';
+} from 'derive-state';
 
 export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
   const isPristine$ = useMemo(
@@ -19,16 +18,8 @@ export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
           pipe(
             combine(
               Array.from(keys).map(key => {
-                const initialValue$ = getMapValue(
-                  key,
-                  formRef.initialValues,
-                  () => new ObservableState()
-                );
-                const value$ = getMapValue(
-                  key,
-                  formRef.values,
-                  () => new ObservableState()
-                );
+                const initialValue$ = getMapValue(key, formRef.initialValues);
+                const value$ = getMapValue(key, formRef.values);
                 return pipe(
                   combine({ initialValue: initialValue$, value: value$ }),
                   map(({ initialValue, value }) => initialValue === value)
@@ -45,7 +36,7 @@ export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
 
   const [isPristine, setIsPristine] = useState<boolean>(() => {
     if (isPristine$.hasValue()) {
-      return isPristine$.getState();
+      return isPristine$.getValue();
     }
     return true;
   });
