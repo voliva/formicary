@@ -27,6 +27,7 @@ export {
   matches,
 } from './validators';
 export { FormRef } from './internal/formRef';
+export { subfield } from './internal/subfield';
 
 /* TODO
 - Global validations

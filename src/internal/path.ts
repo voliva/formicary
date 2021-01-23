@@ -1,3 +1,5 @@
+import { isSubfield } from './subfield';
+
 export type KeySelector<TValues, T> = string | ((values: TValues) => T);
 export type KeysSelector<TValues> = string[] | ((values: TValues) => any[]);
 
@@ -50,14 +52,15 @@ export const getKeyValues = (input: any) => {
     ? (k: string) => `[${k}]`
     : (k: string) => k;
   Object.entries(input).forEach(([key, value]) => {
-    if (isPlainObject(value) || Array.isArray(value)) {
+    const prefixValue = prefix(key);
+    if ((isPlainObject(value) || Array.isArray(value)) && isSubfield(value)) {
       const inner = getKeyValues(value);
       Object.entries(inner).forEach(([innerKey, innerValue]) => {
         const chain = innerKey.startsWith('[') ? '' : '.';
-        result[prefix(key) + chain + innerKey] = innerValue;
+        result[prefixValue + chain + innerKey] = innerValue;
       });
     } else {
-      result[prefix(key)] = value;
+      result[prefixValue] = value;
     }
   });
 
