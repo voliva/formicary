@@ -1,7 +1,7 @@
 export { readField } from './commands/readField';
 export { readForm } from './commands/readForm';
 export { resetForm } from './commands/resetForm';
-export { setFieldValue } from './commands/setFieldValue';
+export { setFieldValue, setFormValue } from './commands/setFieldValue';
 export { setInitialValue } from './commands/setInitialValue';
 export { touchFields } from './commands/touchFields';
 export { setFieldError } from './commands/setFieldError';

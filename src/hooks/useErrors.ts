@@ -9,6 +9,7 @@ import {
   pipe,
   switchMap,
   take,
+  withDefault,
 } from '../observables';
 
 const ALL_KEYS = {};
@@ -17,10 +18,6 @@ export const useErrors = <TValues>(
   keysSelector?: KeysSelector<TValues>
 ) => {
   const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
-  const [errors, setErrors] = useState<
-    Record<string, Exclude<ErrorResult, false>>
-  >({});
-
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
@@ -40,6 +37,7 @@ export const useErrors = <TValues>(
               pipe(
                 getControlState(formRef, key),
                 map(v => (v.touched ? v.error$ : FALSE)),
+                withDefault(FALSE),
                 distinctUntilChanged(),
                 switchMap(v => v)
               ),
@@ -57,6 +55,15 @@ export const useErrors = <TValues>(
       )
     );
   }, [formRef, ...keys]);
+
+  const [errors, setErrors] = useState<
+    Record<string, Exclude<ErrorResult, false>>
+  >(() => {
+    if (error$.hasValue()) {
+      return error$.getState();
+    }
+    return {}; // TODO does this ever happen? - It did: that's why I need to pass in a default value above
+  });
 
   useEffect(() => error$.subscribe(x => setErrors(() => x)), [error$]);
 

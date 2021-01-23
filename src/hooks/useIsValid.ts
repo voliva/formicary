@@ -8,6 +8,7 @@ import {
   pipe,
   switchMap,
   take,
+  withDefault,
 } from '../observables';
 
 const ALL_KEYS = {};
@@ -37,7 +38,8 @@ export const useIsValid = <TValues>(
               pipe(
                 getControlState(formRef, key),
                 take(1),
-                switchMap(v => v.error$)
+                switchMap(v => v.error$),
+                withDefault(false)
               ),
             ])
           )
@@ -78,12 +80,10 @@ export const useIsValid = <TValues>(
     if (isValid$.hasValue()) {
       return isValid$.getState();
     }
-    return defaultValue; // TODO does it ever happen?
+    return defaultValue; // TODO does it ever happen? - It did: that's why I need to pass in a default value above
   });
 
   useEffect(() => isValid$.subscribe(setIsValid), [isValid$]);
 
   return isValid;
 };
-
-const FALSE = new ObservableState(false as false);

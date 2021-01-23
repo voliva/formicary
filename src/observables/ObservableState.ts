@@ -4,8 +4,8 @@ export class ObservableState<T> implements ObservableValue<T> {
   private observers = new Set<(value: T) => void>();
   private state: T | typeof EMPTY;
 
-  constructor(initialValue: T = EMPTY as any) {
-    this.state = initialValue;
+  constructor(initialValue?: T) {
+    this.state = arguments.length >= 1 ? initialValue! : EMPTY;
   }
 
   subscribe(callback: (value: T) => void) {
