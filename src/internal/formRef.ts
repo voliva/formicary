@@ -50,7 +50,6 @@ export const createFormRef = <
     initialValue?: TValues;
   } = {}
 ): FormRef<TValues> => {
-  const registeredKeys = new State(new Set<string>());
   const initialValues = new Map<string, State<any>>();
   Object.entries(getKeyValues(options.initialValue || {})).forEach(
     ([key, value]) => {
@@ -63,6 +62,9 @@ export const createFormRef = <
       ([key, subject]) => [key, new State(subject.getValue())] as const
     )
   );
+
+  const registeredKeys = new State(new Set<string>(values.keys()));
+
   /**
    * Same structure as TValues, but every value is a ControlState
    */

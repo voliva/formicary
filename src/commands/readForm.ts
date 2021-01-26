@@ -7,7 +7,7 @@ export const readForm = <T>(formRef: FormRef<T>): T => {
       Object.fromEntries(
         Array.from(formRef.values.entries()).map(([key, value]) => [
           key,
-          value.getValue(),
+          value.hasValue() ? value.getValue() : undefined,
         ])
       )
     );

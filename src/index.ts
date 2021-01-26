@@ -9,6 +9,7 @@ export { useControlSubscription } from './hooks/useControlSubscription';
 export { useControl } from './hooks/useControl';
 export { useErrors } from './hooks/useErrors';
 export { useForm } from './hooks/useForm';
+export { useFormChanges } from './hooks/useFormChanges';
 export { useInput } from './hooks/useInput';
 export { useIsPristine } from './hooks/useIsPristine';
 export { useIsValid } from './hooks/useIsValid';
