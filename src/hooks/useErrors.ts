@@ -1,9 +1,8 @@
 import {
   combine,
   distinctUntilChanged,
+  just,
   map,
-  pipe,
-  State,
   switchMap,
   withDefault,
 } from 'derive-state';
@@ -20,39 +19,36 @@ export const useErrors = <TValues>(
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
-        ? pipe(
-            formRef.registeredKeys,
-            map(set => Array.from(set))
-          )
-        : new State(keys);
+        ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
+        : just(keys);
 
-    return pipe(
-      keys$,
-      switchMap(keys =>
-        combine(
-          Object.fromEntries(
-            keys.map(key => [
-              key,
-              pipe(
-                getControlState(formRef, key),
-                map(v => (v.touched ? v.error$ : FALSE)),
-                withDefault(FALSE),
-                distinctUntilChanged(),
-                switchMap(v => v)
-              ),
-            ])
+    return keys$
+      .pipe(
+        switchMap(keys =>
+          combine(
+            Object.fromEntries(
+              keys.map(key => [
+                key,
+                getControlState(formRef, key).pipe(
+                  map(v => (v.touched ? v.error$ : FALSE)),
+                  withDefault(FALSE),
+                  distinctUntilChanged(),
+                  switchMap(v => v)
+                ),
+              ])
+            )
           )
-        )
-      ),
-      map(results =>
-        Object.fromEntries(
-          Object.entries(results).filter(([, value]) => value !== false) as [
-            string,
-            Exclude<ErrorResult, false>
-          ][]
+        ),
+        map(results =>
+          Object.fromEntries(
+            Object.entries(results).filter(([, value]) => value !== false) as [
+              string,
+              Exclude<ErrorResult, false>
+            ][]
+          )
         )
       )
-    );
+      .capture();
   }, [formRef, ...keys]);
 
   const [errors, setErrors] = useState<
@@ -64,9 +60,12 @@ export const useErrors = <TValues>(
     return {}; // TODO does this ever happen? - It did: that's why I need to pass in a default value above
   });
 
-  useEffect(() => error$.subscribe(x => setErrors(() => x)), [error$]);
+  useEffect(() => {
+    error$.subscribe(x => setErrors(() => x));
+    return () => error$.close();
+  }, [error$]);
 
   return errors;
 };
 
-const FALSE = new State(false as false);
+const FALSE = just<false>(false);

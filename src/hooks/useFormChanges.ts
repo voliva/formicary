@@ -2,7 +2,6 @@ import {
   combine,
   distinctUntilChanged,
   map,
-  pipe,
   switchMap,
   withDefault,
 } from 'derive-state';
@@ -17,33 +16,36 @@ export const useFormChanges = <T, R>(
 ): R => {
   const valueStream = useMemo(
     () =>
-      pipe(
-        formRef.registeredKeys,
-        map(set => Array.from(set)),
-        switchMap(keys =>
-          combine(
-            Object.fromEntries(
-              keys.map(key => [
-                key,
-                pipe(
-                  formRef.values.get(key)!,
-                  withDefault(undefined),
-                  distinctUntilChanged()
-                ),
-              ])
+      formRef.registeredKeys
+        .pipe(
+          map(set => Array.from(set)),
+          switchMap(keys =>
+            combine(
+              Object.fromEntries(
+                keys.map(key => [
+                  key,
+                  formRef.values
+                    .get(key)!
+                    .pipe(withDefault(undefined), distinctUntilChanged()),
+                ])
+              )
             )
-          )
-        ),
-        map(formValues => mapFn(buildObject(formValues))),
-        distinctUntilChanged(eqFn)
-      ),
+          ),
+          map(formValues => mapFn(buildObject(formValues))),
+          distinctUntilChanged(eqFn)
+        )
+        .capture(),
     [formRef]
   );
+
   const [state, setState] = useState(() =>
     valueStream.hasValue() ? valueStream.getValue() : ({} as any)
   );
 
-  useEffect(() => valueStream.subscribe(setState), [valueStream]);
+  useEffect(() => {
+    valueStream.subscribe(setState);
+    return () => valueStream.close();
+  }, [valueStream]);
 
   return state;
 };

@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0-alpha.7",
+  "version": "0.2.0-alpha.9",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -64,6 +64,6 @@
     "typescript": "^4.0.3"
   },
   "dependencies": {
-    "derive-state": "^0.1.0-alpha.3"
+    "derive-state": "^0.1.0-alpha.7"
   }
 }

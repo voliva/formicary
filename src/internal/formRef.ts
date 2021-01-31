@@ -1,17 +1,16 @@
 import {
   asStateless,
   combine,
-  DerivedState,
   distinctUntilChanged,
   map,
   Observable,
-  ObservableState,
-  pipe,
+  StateObservable,
   skipSynchronous,
   State,
   Stateless,
   take,
   withDefault,
+  StatelessObservable,
 } from 'derive-state';
 import { FieldValidator, noopValidator } from '../validators';
 import { getKey, getKeyValues, getMapValue, KeySelector } from './path';
@@ -40,7 +39,7 @@ export interface ControlState<T> {
   touched: boolean;
   validator: FieldValidator<T>;
   manualError: Stateless<ErrorResult>;
-  error$: ObservableState<ErrorResult>;
+  error$: StateObservable<ErrorResult>;
 }
 
 export const createFormRef = <
@@ -91,8 +90,7 @@ export const createFormRef = <
         manualError,
         error$: createError$({
           key,
-          validator$: pipe(
-            control$,
+          validator$: control$.pipe(
             map(control => control.validator),
             withDefault(validator),
             distinctUntilChanged()
@@ -100,7 +98,7 @@ export const createFormRef = <
           value$,
           manualError$: manualError,
           getControlValue$,
-        }),
+        }).capture(),
       });
     }
 
@@ -135,9 +133,15 @@ export const createFormRef = <
     controlStates,
     values,
     dispose: () => {
-      // [...initialValues.values()].forEach(subject => subject.complete());
-      // [...values.values()].forEach(subject => subject.complete());
-      // [...controlStates.values()].forEach(subject => subject.complete());
+      Array.from(initialValues.values()).forEach(state => state.close());
+      Array.from(values.values()).forEach(state => state.close());
+      Array.from(controlStates.values()).forEach(state => {
+        if (state.hasValue()) {
+          state.getValue().error$.close();
+        }
+        state.close();
+      });
+      registeredKeys.close();
       initialValues.clear();
       values.clear();
       controlStates.clear();
@@ -152,15 +156,15 @@ export const getControlState = <TValues, T>(
 
 const createError$ = <T>(params: {
   key: string;
-  validator$: ObservableState<FieldValidator<T>>;
-  value$: ObservableState<T>;
+  validator$: Observable<FieldValidator<T>>;
+  value$: Observable<T>;
   manualError$: Observable<ErrorResult>;
-  getControlValue$: (key: string) => ObservableState<any>;
-}): ObservableState<ErrorResult> => {
+  getControlValue$: (key: string) => StateObservable<any>;
+}): StatelessObservable<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
 
-  const validationError$ = new DerivedState<ErrorResult>(obs => {
-    const dependenciesObserved = new Set<ObservableState<any>>();
+  const validationError$ = new Stateless<ErrorResult>(obs => {
+    const dependenciesObserved = new Set<StateObservable<any>>();
 
     let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
     validator$.subscribe(v => (latestValidator = v));
@@ -216,18 +220,19 @@ const createError$ = <T>(params: {
     }
   });
 
-  const manualError$ = new DerivedState<ErrorResult>(obs => {
+  const manualError$ = new Stateless<ErrorResult>(obs => {
     obs.next(false);
     let innerUnsub = (): void => void 0;
     const outerUnsub = params.manualError$.subscribe(error => {
       obs.next(error);
       innerUnsub();
-      innerUnsub = pipe(
-        value$,
-        skipSynchronous(),
-        take(1),
-        map(() => false as false)
-      ).subscribe(obs.next);
+      innerUnsub = value$
+        .pipe(
+          skipSynchronous(),
+          take(1),
+          map(() => false as false)
+        )
+        .subscribe(obs.next);
     });
     return () => {
       innerUnsub();
@@ -240,8 +245,7 @@ const createError$ = <T>(params: {
     manualResult: manualError$,
   });
 
-  return pipe(
-    errors,
+  return errors.pipe(
     map(({ validatorResult, manualResult }) => {
       if (manualResult === false || manualResult === 'pending')
         return validatorResult;

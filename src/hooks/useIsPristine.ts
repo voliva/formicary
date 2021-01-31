@@ -1,36 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FormRef } from '../internal/formRef';
 import { getMapValue } from '../internal/path';
-import {
-  combine,
-  distinctUntilChanged,
-  map,
-  pipe,
-  switchMap,
-} from 'derive-state';
+import { combine, distinctUntilChanged, map, switchMap } from 'derive-state';
 
 export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
   const isPristine$ = useMemo(
     () =>
-      pipe(
-        formRef.registeredKeys,
-        switchMap(keys =>
-          pipe(
+      formRef.registeredKeys
+        .pipe(
+          switchMap(keys =>
             combine(
               Array.from(keys).map(key => {
                 const initialValue$ = getMapValue(key, formRef.initialValues);
                 const value$ = getMapValue(key, formRef.values);
-                return pipe(
-                  combine({ initialValue: initialValue$, value: value$ }),
+                return combine({
+                  initialValue: initialValue$,
+                  value: value$,
+                }).pipe(
                   map(({ initialValue, value }) => initialValue === value)
                 );
               })
-            ),
-            map(results => results.every(pristine => pristine))
-          )
-        ),
-        distinctUntilChanged()
-      ),
+            ).pipe(map(results => results.every(pristine => pristine)))
+          ),
+          distinctUntilChanged()
+        )
+        .capture(),
     [formRef]
   );
 
@@ -41,7 +35,10 @@ export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
     return true;
   });
 
-  useEffect(() => isPristine$.subscribe(setIsPristine), [isPristine$]);
+  useEffect(() => {
+    isPristine$.subscribe(setIsPristine);
+    return () => isPristine$.close();
+  }, [isPristine$]);
 
   return isPristine;
 }
