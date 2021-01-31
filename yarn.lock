@@ -3163,10 +3163,10 @@ depd@~1.1.2:
   resolved "https://registry.yarnpkg.com/depd/-/depd-1.1.2.tgz#9bcd52e14c097763e749b274c4346ed2e560b5a9"
   integrity sha1-m81S4UwJd2PnSbJ0xDRu0uVgtak=
 
-derive-state@0.1.0-alpha.2:
-  version "0.1.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/derive-state/-/derive-state-0.1.0-alpha.2.tgz#0a0119cf51f1c34a33b47d2446a994f9a2c4a6b9"
-  integrity sha512-SujYkqttYs5X51lezPGtrmLNEe5GcFtYfPwqZmflc4Qb3G/Yi1YpIKg6WuFrf+wSYckK7cR4ogmRgzGi688jcQ==
+derive-state@^0.1.0-alpha.3:
+  version "0.1.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/derive-state/-/derive-state-0.1.0-alpha.3.tgz#dc7810e0a6d05cde75a114aa982b5e262e4ba7b8"
+  integrity sha512-LxKwUf7k66DbRHRxjy0LyHKMeYAWeSe5QYnuZZQEyFo/AiLkAIW+BSjmOg8udHG6FS58CYLo2w7qlX7fLlfKHA==
 
 des.js@^1.0.0:
   version "1.0.1"

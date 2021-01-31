@@ -6,8 +6,7 @@ export const setFieldValue = <TValues, T>(
   keySelector: KeySelector<TValues, T>,
   value: T
 ) => {
-  const value$ = getMapValue(keySelector, formRef.values);
-  value$.setValue(value);
+  getMapValue(keySelector, formRef.values).setValue(value);
 };
 
 export const setFormValue = <TValues, T>(

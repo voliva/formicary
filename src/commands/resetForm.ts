@@ -14,9 +14,10 @@ export const resetForm = <T>(
     }
     values.get(key)!.setValue(initialValues.get(key)!.getValue());
     const control = getControlState(formRef, key);
-    if (control.getValue().touched) {
+    const controlValue = control.getValue();
+    if (controlValue.touched) {
       control.setValue({
-        ...control.getValue(),
+        ...controlValue,
         touched: false,
       });
     }

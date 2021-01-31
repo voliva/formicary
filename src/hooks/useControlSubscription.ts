@@ -15,13 +15,16 @@ export const useControlSubscription = <TValues, T>(
       getMapValue(key, formRef.values).subscribe(cb),
     touch: () => {
       const state$ = getControlState(formRef, key);
-      state$.value.then(() => {
-        if (state$.getValue().touched) return;
-        state$.setValue({
-          ...state$.getValue(),
-          touched: true,
-        });
-      });
+      state$.value.then(
+        value => {
+          if (value.touched) return;
+          state$.setValue({
+            ...value,
+            touched: true,
+          });
+        },
+        () => {}
+      );
     },
   };
 };

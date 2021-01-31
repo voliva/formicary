@@ -159,7 +159,7 @@ const createError$ = <T>(params: {
 }): ObservableState<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
 
-  const validationError$ = new DerivedState<ErrorResult>(next => {
+  const validationError$ = new DerivedState<ErrorResult>(obs => {
     const dependenciesObserved = new Set<ObservableState<any>>();
 
     let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
@@ -193,14 +193,14 @@ const createError$ = <T>(params: {
           return targetControlValue$.getValue();
         });
         if (typeof result === 'boolean') {
-          return next(result === true ? false : []);
+          return obs.next(result === true ? false : []);
         }
         if (Array.isArray(result)) {
-          return next(result);
+          return obs.next(result);
         }
-        next('pending');
+        obs.next('pending');
         result.then(result =>
-          next(result === true ? false : result === false ? [] : result)
+          obs.next(result === true ? false : result === false ? [] : result)
         );
       } catch (ex) {
         if (ex instanceof ValueNotThereYetError) {
@@ -211,24 +211,28 @@ const createError$ = <T>(params: {
         } else {
           console.error(ex); // TODO how to propagate into an error boundary? :|
         }
-        return next('pending' as const);
+        return obs.next('pending' as const);
       }
     }
   });
 
-  const manualError$ = new DerivedState<ErrorResult>(next => {
-    next(false);
+  const manualError$ = new DerivedState<ErrorResult>(obs => {
+    obs.next(false);
     let innerUnsub = (): void => void 0;
-    return params.manualError$.subscribe(error => {
-      next(error);
+    const outerUnsub = params.manualError$.subscribe(error => {
+      obs.next(error);
       innerUnsub();
       innerUnsub = pipe(
         value$,
         skipSynchronous(),
         take(1),
         map(() => false as false)
-      ).subscribe(next);
+      ).subscribe(obs.next);
     });
+    return () => {
+      innerUnsub();
+      outerUnsub();
+    };
   });
 
   const errors = combine({
