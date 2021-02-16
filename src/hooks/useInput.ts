@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { FormRef, getControlState } from '../internal/formRef';
-import { getKey, KeySelector, navigateDeepSubject } from '../internal/path';
+import { getKey, getMapValue, KeySelector } from '../internal/path';
 import { FieldValidator } from '../validators';
 
 export const useInput = <TValues, T>(
@@ -37,24 +37,28 @@ export const useInput = <TValues, T>(
       validator,
     });
 
-    const value$ = navigateDeepSubject(key, formRef.values$);
-    const valueSub = value$.subscribe(value => {
+    const value$ = getMapValue(key, formRef.values);
+    const valueUnsub = value$.subscribe(value => {
       if ((element as any)[elementProp] !== value) {
         (element as any)[elementProp] = value;
       }
     });
 
-    const blurListener = () =>
-      getControlState(formRef, key)
-        .getChild('touched')
-        .next(true);
+    const blurListener = () => {
+      const control$ = getControlState(formRef, key);
+      if (control$.getValue().touched) return;
+      control$.setValue({
+        ...control$.getValue(),
+        touched: true,
+      });
+    };
     element.addEventListener('blur', blurListener);
     const valueListener = (event: any) =>
-      value$.next(event.target[elementProp]);
+      value$.setValue(event.target[elementProp]);
     element.addEventListener(eventType, valueListener);
 
     return () => {
-      valueSub.unsubscribe();
+      valueUnsub();
       element.removeEventListener('blur', blurListener);
       element.removeEventListener(eventType, valueListener);
     };

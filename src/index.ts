@@ -1,6 +1,7 @@
+export { readField } from './commands/readField';
 export { readForm } from './commands/readForm';
 export { resetForm } from './commands/resetForm';
-export { setFieldValue } from './commands/setFieldValue';
+export { setFieldValue, setFormValue } from './commands/setFieldValue';
 export { setInitialValue } from './commands/setInitialValue';
 export { touchFields } from './commands/touchFields';
 export { setFieldError } from './commands/setFieldError';
@@ -8,6 +9,7 @@ export { useControlSubscription } from './hooks/useControlSubscription';
 export { useControl } from './hooks/useControl';
 export { useErrors } from './hooks/useErrors';
 export { useForm } from './hooks/useForm';
+export { useFormChanges } from './hooks/useFormChanges';
 export { useInput } from './hooks/useInput';
 export { useIsPristine } from './hooks/useIsPristine';
 export { useIsValid } from './hooks/useIsValid';
@@ -26,6 +28,7 @@ export {
   matches,
 } from './validators';
 export { FormRef } from './internal/formRef';
+export { subfield } from './internal/subfield';
 
 /* TODO
 - Global validations

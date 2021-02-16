@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { useForm } from '../hooks/useForm';
 import { useInput } from '../hooks/useInput';
+import { subfield } from '../internal/subfield';
 import { readForm } from './readForm';
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
@@ -64,9 +65,9 @@ describe('readForm', () => {
         onSubmit={onSubmit}
         initialValue={{
           value: 'initial0',
-          nested: {
+          nested: subfield({
             value: 'initial1',
-          },
+          }),
         }}
       />
     );

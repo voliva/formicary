@@ -67,7 +67,7 @@ Because this library is thought in reactivity in mind, it just makes the recompu
 const form = useForm<ModelType>();
 ```
 
-Entry point of this library. Takes no parameters, but the FormModel as a generic type when using typescript.
+Entry point of this library. By default, it takes no parameters, but the FormModel as a generic type when using typescript. You can also pass in the initial value if needed.
 
 Returns an object needed to use the rest of the utilities of this library. It can be shared with children components.
 

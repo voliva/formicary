@@ -1,6 +1,12 @@
+import {
+  combine,
+  distinctUntilChanged,
+  just,
+  map,
+  switchMap,
+  withDefault,
+} from 'derive-state';
 import { useEffect, useMemo, useState } from 'react';
-import { merge, of } from 'rxjs';
-import { distinctUntilChanged, map, scan, switchMap } from 'rxjs/operators';
 import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
 import { getKeys, KeysSelector } from '../internal/path';
 
@@ -9,58 +15,57 @@ export const useErrors = <TValues>(
   formRef: FormRef<TValues>,
   keysSelector?: KeysSelector<TValues>
 ) => {
-  const keys = keysSelector ? getKeys(keysSelector) : [ALL_KEYS];
-  const [errors, setErrors] = useState<
-    Record<string, Exclude<ErrorResult, false>>
-  >({});
-
+  const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
         ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
-        : of(keys as string[]);
-    const result = keys$.pipe(
-      switchMap(keys =>
-        merge(
-          ...keys.map(key =>
-            getControlState(formRef, key).pipe(
-              switchMap(v =>
-                v.touched
-                  ? v.error$.pipe(map(payload => ({ key, payload })))
-                  : of<{ key: string; payload: false }>({
-                      key,
-                      payload: false,
-                    })
-              )
+        : just(keys);
+
+    return keys$
+      .pipe(
+        switchMap(keys =>
+          combine(
+            Object.fromEntries(
+              keys.map(key => [
+                key,
+                getControlState(formRef, key).pipe(
+                  map(v => (v.touched ? v.error$ : FALSE)),
+                  withDefault(FALSE),
+                  distinctUntilChanged(),
+                  switchMap(v => v)
+                ),
+              ])
             )
           )
-        ).pipe(
-          scan((old, { key, payload }) => {
-            if (payload === false) {
-              if (key in old) {
-                const { [key]: _, ...newValue } = old;
-                return newValue;
-              }
-              return old;
-            }
-            return old[key] === payload
-              ? old
-              : {
-                  ...old,
-                  [key]: payload,
-                };
-          }, {} as Record<string, Exclude<ErrorResult, false>>),
-          distinctUntilChanged()
+        ),
+        map(results =>
+          Object.fromEntries(
+            Object.entries(results).filter(([, value]) => value !== false) as [
+              string,
+              Exclude<ErrorResult, false>
+            ][]
+          )
         )
       )
-    );
-    return result;
+      .capture();
   }, [formRef, ...keys]);
 
+  const [errors, setErrors] = useState<
+    Record<string, Exclude<ErrorResult, false>>
+  >(() => {
+    if (error$.hasValue()) {
+      return error$.getValue();
+    }
+    return {}; // TODO does this ever happen? - It did: that's why I need to pass in a default value above
+  });
+
   useEffect(() => {
-    const sub = error$.subscribe(setErrors);
-    return () => sub.unsubscribe();
+    error$.subscribe(x => setErrors(() => x));
+    return () => error$.close();
   }, [error$]);
 
   return errors;
 };
+
+const FALSE = just<false>(false);

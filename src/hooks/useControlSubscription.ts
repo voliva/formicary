@@ -1,28 +1,30 @@
-import { useEffect } from 'react';
 import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
-import { getKey, navigateDeepSubject } from '../internal/path';
+import { getKey, getMapValue } from '../internal/path';
 
 export const useControlSubscription = <TValues, T>(
   formRef: FormRef<TValues>,
   options: ControlOptions<TValues, T>
 ) => {
   const key = getKey(options.key);
-  useEffect(() => {
-    formRef.registerControl(options);
-  }, [formRef, options]);
+  formRef.registerControl(options);
 
   return {
-    setValue: (value: T) =>
-      navigateDeepSubject(key, formRef.values$).next(value),
-    subscribe: (cb: (value: T) => void) => {
-      const sub = navigateDeepSubject(key, formRef.values$).subscribe(cb);
-      return () => {
-        sub.unsubscribe();
-      };
+    getValue: () => getMapValue(key, formRef.values).getValue(),
+    setValue: (value: T) => getMapValue(key, formRef.values).setValue(value),
+    subscribe: (cb: (value: T) => void) =>
+      getMapValue(key, formRef.values).subscribe(cb),
+    touch: () => {
+      const state$ = getControlState(formRef, key);
+      state$.value.then(
+        value => {
+          if (value.touched) return;
+          state$.setValue({
+            ...value,
+            touched: true,
+          });
+        },
+        () => {}
+      );
     },
-    touch: () =>
-      getControlState(formRef, key)
-        .getChild('touched')
-        .next(true),
   };
 };

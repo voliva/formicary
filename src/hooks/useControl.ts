@@ -7,7 +7,7 @@ export const useControl = <TValues, T>(
   options: ControlOptions<TValues, T>
 ) => {
   const { subscribe, ...control } = useControlSubscription(formRef, options);
-  const [state, setState] = useState<T>(options.initialValue);
+  const [state, setState] = useState<T>(control.getValue);
 
   useEffect(() => subscribe(setState), []);
 
