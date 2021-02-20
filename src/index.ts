@@ -2,7 +2,10 @@ export { readField } from './commands/readField';
 export { readForm } from './commands/readForm';
 export { resetForm } from './commands/resetForm';
 export { setFieldValue, setFormValue } from './commands/setFieldValue';
-export { setInitialValue } from './commands/setInitialValue';
+export {
+  setInitialValue,
+  setFormInitialValue,
+} from './commands/setInitialValue';
 export { touchFields } from './commands/touchFields';
 export { setFieldError } from './commands/setFieldError';
 export { useControlSubscription } from './hooks/useControlSubscription';
