@@ -3,15 +3,27 @@ import { FormRef, getControlState } from '../internal/formRef';
 import { getKey, getMapValue, KeySelector } from '../internal/path';
 import { FieldValidator } from '../validators';
 
-export const useInput = <TValues, T>(
+type ValueOptions<TField, TValue extends string | boolean> =
+  | {
+      initialValue?: TValue;
+    }
+  | {
+      initialValue?: TField;
+      getInputValue: (fieldValue: TField) => TValue;
+      getFieldValue: (
+        value: TValue,
+        oldFieldValue: TField | undefined
+      ) => TField;
+    };
+
+export const useInput = <TValues, TField, TValue extends string | boolean>(
   formRef: FormRef<TValues>,
   options: {
     elementProp?: string;
     eventType?: 'input' | 'onChange';
-    key?: KeySelector<TValues, T>;
-    validator?: FieldValidator<T, TValues>;
-    initialValue?: string | boolean;
-  } = {}
+    key?: KeySelector<TValues, TField>;
+    validator?: FieldValidator<TField, TValues>;
+  } & ValueOptions<TField, TValue> = {}
 ) => {
   const { eventType = 'input', elementProp = 'value' } = options;
   const ref = useRef<HTMLInputElement | null>(null);
@@ -21,7 +33,23 @@ export const useInput = <TValues, T>(
     if (!element) {
       return;
     }
-    const { initialValue = '', validator } = options;
+    const { validator } = options;
+
+    const { initialValue, getInputValue, getFieldValue } = (() => {
+      if ('getInputValue' in options) {
+        return {
+          initialValue: options.initialValue || '',
+          getInputValue: options.getInputValue,
+          getFieldValue: options.getFieldValue,
+        };
+      }
+      return {
+        initialValue: options.initialValue || '',
+        getInputValue: (v: any) => v,
+        getFieldValue: (v: any) => v,
+      };
+    })();
+
     const key: string = options.key ? getKey(options.key) : element.name;
     if (!key) {
       console.error(
@@ -40,7 +68,7 @@ export const useInput = <TValues, T>(
     const value$ = getMapValue(key, formRef.values);
     const valueUnsub = value$.subscribe(value => {
       if ((element as any)[elementProp] !== value) {
-        (element as any)[elementProp] = value;
+        (element as any)[elementProp] = getInputValue(value);
       }
     });
 
@@ -54,7 +82,12 @@ export const useInput = <TValues, T>(
     };
     element.addEventListener('blur', blurListener);
     const valueListener = (event: any) =>
-      value$.setValue(event.target[elementProp]);
+      value$.setValue(
+        getFieldValue(
+          event.target[elementProp],
+          value$.hasValue() ? value$.getValue() : undefined
+        )
+      );
     element.addEventListener(eventType, valueListener);
 
     return () => {
