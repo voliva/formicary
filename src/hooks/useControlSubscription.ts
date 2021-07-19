@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
 import { getKey, getMapValue } from '../internal/path';
 
@@ -6,10 +7,16 @@ export const useControlSubscription = <TValues, T>(
   options: ControlOptions<TValues, T>
 ) => {
   const key = getKey(options.key);
-  formRef.registerControl(options);
+
+  useEffect(() => {
+    formRef.registerControl(options);
+  }, [formRef, options]);
 
   return {
-    getValue: () => getMapValue(key, formRef.values).getValue(),
+    getValue: () => {
+      const state = getMapValue(key, formRef.values);
+      return state.hasValue() ? state.getValue() : options.initialValue;
+    },
     setValue: (value: T) => getMapValue(key, formRef.values).setValue(value),
     subscribe: (cb: (value: T) => void) =>
       getMapValue(key, formRef.values).subscribe(cb),

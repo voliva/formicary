@@ -14,6 +14,7 @@ import {
   useIsPristine,
   useIsValid,
   setFieldError,
+  useControl,
 } from '.././src';
 import { useState } from 'react';
 import { useEffect } from 'react';
@@ -50,6 +51,7 @@ const Form = () => {
       <div>Minimum: {min}</div>
       <div>{pristine ? 'pristine' : 'dirty'}</div>
       <div>{isValid ? 'valid' : 'invalid'}</div>
+      {pristine ? null : <SubComponent formRef={form} />}
       <button
         onClick={() => {
           const value = readForm(form);
@@ -63,6 +65,15 @@ const Form = () => {
       </button>
     </div>
   );
+};
+
+const SubComponent = ({ formRef }) => {
+  const control = useControl(formRef, {
+    initialValue: 'something',
+    key: 'subcontrol',
+  });
+
+  return <div>{control.value}</div>;
 };
 
 const App = () => {
