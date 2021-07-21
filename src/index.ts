@@ -29,16 +29,23 @@ export {
   mergeValidators,
   pipeValidators,
   matches,
+  conditionalValidator,
 } from './validators';
 export { FormRef } from './internal/formRef';
 export { subfield } from './internal/subfield';
+export { KeySelector } from './internal/path';
 
 /* TODO
-- Global validations
-- On submit validations
+- Context provider
+- i18n support (Default validators to give an error type instead of a localised message)
+- Derived changes
 - Remove/cleanup unused fields (need refcount?)
+- getErrors command
+  => Investigate scroll into view after touch fields
+- Array fields
 - Better control of touched
   * show error if a dependency causes that field to go on error, even when left untouched
+- Global validations
+- On submit validations
 - Custom typings for FormRef (as an opaque token)
-- Default validators to give an error type instead of a localised message
 */

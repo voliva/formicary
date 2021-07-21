@@ -91,10 +91,11 @@ Formicary currently exposes some common validators to make things less verbose, 
 
 A validator must return either a boolean (true means validation passes, false means it fails) or a list of error messages. It can also be async, in case it needs some asynchronous logic.
 
-Validators are composable. This library exposes two utilities to compose them easily:
+Validators are composable. This library exposes some utilities to compose them easily:
 
 - `pipeValidators(...validators)` takes any number of validators and runs them one-by-one, bailing out when one of them reports an error.
 - `mergeValidators(...validators)` takes any number of validators and runs them simultaneously, returning the list of all errors reported if there were any.
+- `conditionalValidator(conditionFn, validator)` only runs `validator` when conditionFn returns `true`, otherwise it always accepts.
 
 And it provides a set of useful built-in validators:
 

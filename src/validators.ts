@@ -139,6 +139,21 @@ export const mergeValidators: ValidatorComposer = (...validators: any[]) => (
   return processResult(syncResults as any);
 };
 
+export function conditionalValidator<T, TValues>(
+  condition: (
+    value: T,
+    getValue: (key: KeySelector<TValues, T>) => any
+  ) => boolean,
+  validator: PureValidator<T> | FieldValidator<T, TValues>
+): FieldValidator<T, TValues> {
+  return (value, getValue) => {
+    if (condition(value, getValue)) {
+      return validator(value, getValue);
+    }
+    return true;
+  };
+}
+
 export const noopValidator: PureValidator<any> = () => true;
 
 const validationResultIsAsync = (
