@@ -1,3 +1,4 @@
+export { getFieldChanges } from './commands/getFieldChanges';
 export { readField } from './commands/readField';
 export { readForm } from './commands/readForm';
 export { resetForm } from './commands/resetForm';

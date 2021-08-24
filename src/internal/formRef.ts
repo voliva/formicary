@@ -112,17 +112,14 @@ export const createFormRef = <
 
     // Update initial value
     const initialValue$ = getMapValue(key, initialValues);
-    if (
-      !initialValue$.hasValue() ||
-      initialValue$.getValue() !== initialValue
-    ) {
+    if (!initialValue$.hasValue()) {
       initialValue$.setValue(initialValue);
     }
 
     // If it doesn't have value, set it to initial value
     const valueSource$ = getMapValue(key, values);
     if (!valueSource$.hasValue()) {
-      valueSource$.setValue(initialValue);
+      valueSource$.setValue(initialValue$.getValue());
     }
   };
 
