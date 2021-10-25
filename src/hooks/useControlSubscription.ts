@@ -24,7 +24,7 @@ export const useControlSubscription = <TValues, T>(
       const state$ = getControlState(formRef, key);
       state$.value.then(
         value => {
-          if (value.touched) return;
+          if (value.touched || state$.closed) return;
           state$.setValue({
             ...value,
             touched: true,
