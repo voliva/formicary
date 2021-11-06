@@ -38,7 +38,6 @@ export { KeySelector } from './internal/path';
 
 /* TODO
 - Context provider
-- i18n support (Default validators to give an error type instead of a localised message)
 - Derived changes
 - Remove/cleanup unused fields (need refcount?)
 - getErrors command

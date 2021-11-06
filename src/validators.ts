@@ -1,31 +1,53 @@
 import { KeySelector } from './internal/path';
 
+const validatorMessages = {
+  isNumber: () => 'Expected a number',
+  isInteger: () => 'Expected an integer',
+  isRequired: () => 'Required',
+  isAtLeast: (threshold: number) => 'Expected a value of at least ' + threshold,
+  isGreaterThan: (threshold: number) =>
+    'Expected a value greater than ' + threshold,
+  isAtMost: (threshold: number) => 'Expected a value of at most ' + threshold,
+  isLessThan: (threshold: number) => 'Expected a value less than ' + threshold,
+  matches: (regex: RegExp) => 'Invalid Value',
+};
+
+export const setValidatorMessages = (
+  messages: Partial<typeof validatorMessages>
+) => {
+  Object.entries(messages).forEach(
+    ([key, value]) => ((validatorMessages as any)[key] = value)
+  );
+};
+
 export type PureValidator<T> = (
   value: T
-) => boolean | string[] | Promise<boolean | string[]>;
+) => true | string[] | Promise<true | string[]>;
 export type FieldValidator<T, TValues = any> = (
   value: T,
   getValue: (key: KeySelector<TValues, T>) => any
-) => boolean | string[] | Promise<boolean | string[]>;
+) => true | string[] | Promise<true | string[]>;
 
 type ValidatorParam<T> = T | ((getValue: (key: string) => any) => T);
 
-export const isNumber: PureValidator<any> = value => {
+export const isNumber = (message?: string): PureValidator<any> => value => {
   if (isNaN(value)) {
-    return ['Expected a number'];
+    return [message ?? validatorMessages.isNumber()];
   }
   return true;
 };
 
-export const isInteger: PureValidator<any> = value => {
+export const isInteger = (message?: string): PureValidator<any> => value => {
   if (parseInt(value) !== parseFloat(value)) {
-    return ['Expected an integer'];
+    return [message ?? validatorMessages.isInteger()];
   }
   return true;
 };
 
-export const isRequired: PureValidator<any> = value =>
-  value != null && value !== '' ? true : ['required'];
+export const isRequired = (message?: string): PureValidator<any> => value =>
+  value != null && value !== ''
+    ? true
+    : [message ?? validatorMessages.isRequired()];
 
 const parseNumericParam = (
   value: string | ValidatorParam<number>,
@@ -38,41 +60,45 @@ const parseNumericParam = (
     : value;
 
 export const isAtLeast = (
-  threshold: string | ValidatorParam<number>
+  threshold: string | ValidatorParam<number>,
+  message?: string
 ): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) < thresholdValue) {
-    return ['Expected a value of at least ' + thresholdValue];
+    return [message ?? validatorMessages.isAtLeast(thresholdValue)];
   }
   return true;
 };
 
 export const isGreaterThan = (
-  threshold: string | ValidatorParam<number>
+  threshold: string | ValidatorParam<number>,
+  message?: string
 ): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) <= thresholdValue) {
-    return ['Expected a value greater than ' + thresholdValue];
+    return [message ?? validatorMessages.isGreaterThan(thresholdValue)];
   }
   return true;
 };
 
 export const isAtMost = (
-  threshold: string | ValidatorParam<number>
+  threshold: string | ValidatorParam<number>,
+  message?: string
 ): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) > thresholdValue) {
-    return ['Expected a value of at most ' + thresholdValue];
+    return [message ?? validatorMessages.isAtMost(thresholdValue)];
   }
   return true;
 };
 
 export const isLessThan = (
-  threshold: string | ValidatorParam<number>
+  threshold: string | ValidatorParam<number>,
+  message?: string
 ): FieldValidator<number> => (value, getValue) => {
   const thresholdValue = parseNumericParam(threshold, getValue);
   if (Number(value) >= thresholdValue) {
-    return ['Expected a value less than ' + thresholdValue];
+    return [message ?? validatorMessages.isLessThan(thresholdValue)];
   }
   return true;
 };
@@ -84,7 +110,7 @@ export const matches = (
   if (regex.test(value)) {
     return true;
   }
-  return [message ?? 'Invalid value'];
+  return [message ?? validatorMessages.matches(regex)];
 };
 
 const recPipeValidators = (validators: Array<any>, i: number): any => (
@@ -123,13 +149,10 @@ export const mergeValidators: ValidatorComposer = (...validators: any[]) => (
 ) => {
   const syncResults = validators.map(validate => (validate as any)(...args));
 
-  const processResult = (results: (boolean | string[])[]) => {
+  const processResult = (results: (true | string[])[]) => {
     const flattenedResults = results.flatMap(result =>
-      typeof result === 'boolean' ? [] : result
+      result === true ? [] : result
     );
-    if (flattenedResults.length === 0) {
-      return !results.some(result => result === false);
-    }
     return flattenedResults;
   };
 
