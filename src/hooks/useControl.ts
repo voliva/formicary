@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react';
 import { ControlOptions, FormRef } from '../internal/formRef';
-import { useControlSubscription } from './useControlSubscription';
+import { useHookParams } from '../internal/useHookParams';
+import { ControlStateless, useControlStateless } from './useControlStateless';
 
-export const useControl = <TValues, T>(
+export type Control<T> = Omit<ControlStateless<T>, 'subscribe'> & {
+  value: T;
+};
+
+export function useControl<TValues, T>(
+  options: ControlOptions<TValues, T>
+): Control<T>;
+export function useControl<TValues, T>(
   formRef: FormRef<TValues>,
   options: ControlOptions<TValues, T>
-) => {
-  const { subscribe, ...control } = useControlSubscription(formRef, options);
+): Control<T>;
+export function useControl<TValues, T>(...args: any[]): Control<T> {
+  const [formRef, options] = useHookParams<
+    TValues,
+    [ControlOptions<TValues, T>]
+  >(args);
+  const { subscribe, ...control } = useControlStateless(formRef, options);
   const [state, setState] = useState<T>(control.getValue);
 
   useEffect(() => subscribe(setState), []);
@@ -15,4 +28,4 @@ export const useControl = <TValues, T>(
     ...control,
     value: state,
   };
-};
+}

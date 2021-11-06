@@ -1,18 +1,29 @@
-import { useEffect, useRef } from 'react';
+import { MutableRefObject, useEffect, useRef } from 'react';
 import { FormRef, getControlState } from '../internal/formRef';
 import { getKey, getMapValue, KeySelector } from '../internal/path';
+import { useHookParams } from '../internal/useHookParams';
 import { FieldValidator } from '../validators';
 
-export const useInput = <TValues, T>(
+export type InputOptions<T, TValues> = {
+  elementProp?: string;
+  eventType?: 'input' | 'onChange';
+  key?: KeySelector<TValues, T>;
+  validator?: FieldValidator<T, TValues>;
+  initialValue?: string | boolean;
+};
+
+export function useInput<TValues, T>(
+  options?: InputOptions<TValues, T>
+): MutableRefObject<HTMLInputElement | null>;
+export function useInput<TValues, T>(
   formRef: FormRef<TValues>,
-  options: {
-    elementProp?: string;
-    eventType?: 'input' | 'onChange';
-    key?: KeySelector<TValues, T>;
-    validator?: FieldValidator<T, TValues>;
-    initialValue?: string | boolean;
-  } = {}
-) => {
+  options?: InputOptions<TValues, T>
+): MutableRefObject<HTMLInputElement | null>;
+export function useInput<TValues, T>(...args: any[]) {
+  const [formRef, options = {}] = useHookParams<
+    TValues,
+    [InputOptions<T, TValues> | undefined]
+  >(args);
   const { eventType = 'input', elementProp = 'value' } = options;
   const ref = useRef<HTMLInputElement | null>(null);
 
@@ -65,4 +76,4 @@ export const useInput = <TValues, T>(
   });
 
   return ref;
-};
+}

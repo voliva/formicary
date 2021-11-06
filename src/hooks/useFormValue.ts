@@ -8,12 +8,22 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { FormRef } from '../internal/formRef';
 import { buildObject } from '../internal/path';
+import { useHookParams } from '../internal/useHookParams';
 
-export const useFormChanges = <T, R>(
+export function useFormValue<T, R>(
+  mapFn: (value: T) => R,
+  eqFn?: (a: R, b: R) => boolean
+): R;
+export function useFormValue<T, R>(
   formRef: FormRef<T>,
   mapFn: (value: T) => R,
   eqFn?: (a: R, b: R) => boolean
-): R => {
+): R;
+export function useFormValue<T, R>(...args: any[]): R {
+  const [formRef, mapFn, eqFn] = useHookParams<
+    T,
+    [(value: T) => R, undefined | ((a: R, b: R) => boolean)]
+  >(args);
   const valueStream = useMemo(
     () =>
       formRef.registeredKeys
@@ -48,4 +58,4 @@ export const useFormChanges = <T, R>(
   }, [valueStream]);
 
   return state;
-};
+}

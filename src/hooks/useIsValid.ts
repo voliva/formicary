@@ -2,13 +2,23 @@ import { combine, just, map, switchMap, take, withDefault } from 'derive-state';
 import { useEffect, useMemo, useState } from 'react';
 import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
 import { getKeys, KeysSelector } from '../internal/path';
+import { useHookParams } from '../internal/useHookParams';
 
 const ALL_KEYS = {};
-export const useIsValid = <TValues>(
-  formRef: FormRef<TValues>,
-  defaultValue: boolean = false,
+export function useIsValid<TValues>(
+  defaultValue?: boolean,
   keysSelector?: KeysSelector<TValues>
-) => {
+): boolean | 'pending';
+export function useIsValid<TValues>(
+  formRef: FormRef<TValues>,
+  defaultValue?: boolean,
+  keysSelector?: KeysSelector<TValues>
+): boolean | 'pending';
+export function useIsValid<TValues>(...args: any[]): boolean | 'pending' {
+  const [formRef, defaultValue = false, keysSelector] = useHookParams<
+    TValues,
+    [boolean | undefined, KeysSelector<TValues> | undefined]
+  >(args);
   const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
 
   const error$ = useMemo(() => {
@@ -77,4 +87,4 @@ export const useIsValid = <TValues>(
   }, [isValid$]);
 
   return isValid;
-};
+}

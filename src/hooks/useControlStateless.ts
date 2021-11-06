@@ -1,11 +1,29 @@
 import { useEffect } from 'react';
 import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
 import { getKey, getMapValue } from '../internal/path';
+import { useHookParams } from '../internal/useHookParams';
 
-export const useControlSubscription = <TValues, T>(
+export interface ControlStateless<T> {
+  getValue: () => T;
+  setValue: (value: T) => void;
+  subscribe: (cb: (value: T) => void) => void;
+  touch: () => void;
+}
+
+export function useControlStateless<TValues, T>(
+  options: ControlOptions<TValues, T>
+): ControlStateless<T>;
+export function useControlStateless<TValues, T>(
   formRef: FormRef<TValues>,
   options: ControlOptions<TValues, T>
-) => {
+): ControlStateless<T>;
+export function useControlStateless<TValues, T>(
+  ...args: any[]
+): ControlStateless<T> {
+  const [formRef, options] = useHookParams<
+    TValues,
+    [ControlOptions<TValues, T>]
+  >(args);
   const key = getKey(options.key);
 
   useEffect(() => {
@@ -34,4 +52,4 @@ export const useControlSubscription = <TValues, T>(
       );
     },
   };
-};
+}

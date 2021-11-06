@@ -146,6 +146,15 @@ export const createFormRef = <
   };
 };
 
+export function isFormRef(value: unknown): value is FormRef<any> {
+  return !!(
+    typeof value === 'object' &&
+    value &&
+    'registeredKeys' in value &&
+    'registerControl' in value
+  );
+}
+
 export const getControlState = <TValues, T>(
   formRef: FormRef<TValues>,
   key: KeySelector<TValues, T>

@@ -2,17 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { FormRef } from '../internal/formRef';
 import { getMapValue } from '../internal/path';
 import { combine, distinctUntilChanged, map, switchMap } from 'derive-state';
+import { useHookParams } from '../internal/useHookParams';
 
-export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
+export function useIsPristine<TValues>(formRef?: FormRef<TValues>): boolean {
+  const [_formRef] = useHookParams<TValues>([formRef]);
+
   const isPristine$ = useMemo(
     () =>
-      formRef.registeredKeys
+      _formRef.registeredKeys
         .pipe(
           switchMap(keys =>
             combine(
               Array.from(keys).map(key => {
-                const initialValue$ = getMapValue(key, formRef.initialValues);
-                const value$ = getMapValue(key, formRef.values);
+                const initialValue$ = getMapValue(key, _formRef.initialValues);
+                const value$ = getMapValue(key, _formRef.values);
                 return combine({
                   initialValue: initialValue$,
                   value: value$,
@@ -25,7 +28,7 @@ export function useIsPristine<TValues>(formRef: FormRef<TValues>): boolean {
           distinctUntilChanged()
         )
         .capture(),
-    [formRef]
+    [_formRef]
   );
 
   const [isPristine, setIsPristine] = useState<boolean>(() => {
