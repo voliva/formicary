@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { ControlOptions, FormRef } from '../internal/formRef';
-import { useHookParams } from '../internal/useHookParams';
-import { ControlStateless, useControlStateless } from './useControlStateless';
+import { useEffect, useState } from "react";
+import { ControlOptions, FormRef } from "../internal/formRef";
+import { useHookParams } from "../internal/useHookParams";
+import { ControlStateless, useControlStateless } from "./useControlStateless";
 
-export type Control<T> = Omit<ControlStateless<T>, 'subscribe'> & {
+export type Control<T> = Omit<ControlStateless<T>, "subscribe"> & {
   value: T;
 };
 

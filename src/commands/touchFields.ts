@@ -1,10 +1,10 @@
-import { FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector } from '../internal/path';
+import { FormRef, getControlState } from "../internal/formRef";
+import { getKeys, KeysSelector } from "../internal/path";
 
 export const touchFields = <TValues>(
   formRef: FormRef<TValues>,
   keysSelector?: KeysSelector<TValues>,
-  touch: boolean = true
+  touch = true
 ) => {
   const keys = keysSelector
     ? getKeys(keysSelector)

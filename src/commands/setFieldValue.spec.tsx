@@ -1,11 +1,11 @@
-import { render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import React from 'react';
-import { useForm } from '../hooks/useForm';
-import { useInput } from '../hooks/useInput';
-import { useIsValid } from '../hooks/useIsValid';
-import { readForm } from './readForm';
-import { setFieldValue, setFormValue } from './setFieldValue';
+import { render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
+import { useForm } from "../hooks/useForm";
+import { useInput } from "../hooks/useInput";
+import { useIsValid } from "../hooks/useIsValid";
+import { readForm } from "./readForm";
+import { setFieldValue, setFormValue } from "./setFieldValue";
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
   const form = useForm({
@@ -15,7 +15,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
 
   return (
     <form
-      onSubmit={e => {
+      onSubmit={(e) => {
         e.preventDefault();
         onSubmit(readForm(form));
       }}
@@ -27,7 +27,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
       <button
         data-testid="setFieldValue"
         type="button"
-        onClick={() => setFieldValue(form, 'value', 'value set')}
+        onClick={() => setFieldValue(form, "value", "value set")}
       ></button>
       <button
         data-testid="setMultiple"
@@ -35,9 +35,9 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
         onClick={() =>
           setFormValue(form, {
             nested: {
-              value: 'multiple set 0',
+              value: "multiple set 0",
             },
-            value: 'multiple set 1',
+            value: "multiple set 1",
           })
         }
       ></button>
@@ -47,7 +47,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
         onClick={() =>
           setFormValue(form, {
             nested: {
-              value: 'ignoring some',
+              value: "ignoring some",
             },
           })
         }
@@ -56,55 +56,55 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
   );
 };
 
-describe('setFieldValue', () => {
-  it('sets the value of individual fields', () => {
+describe("setFieldValue", () => {
+  it("sets the value of individual fields", () => {
     const onSubmit = jest.fn();
     const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
     userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
-        value: '',
+        value: "",
       },
-      value: '',
+      value: "",
     });
 
-    userEvent.click(getByTestId('setFieldValue'));
+    userEvent.click(getByTestId("setFieldValue"));
     userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
-        value: '',
+        value: "",
       },
-      value: 'value set',
-    });
-  });
-
-  it('sets the value of multiple fields', () => {
-    const onSubmit = jest.fn();
-    const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
-    userEvent.click(getByTestId('setMultiple'));
-    userEvent.click(container.querySelector('input[type="submit"]')!);
-    expect(onSubmit).toHaveBeenCalledWith({
-      nested: {
-        value: 'multiple set 0',
-      },
-      value: 'multiple set 1',
+      value: "value set",
     });
   });
 
-  it('ignores fields not explicitely passed in', () => {
+  it("sets the value of multiple fields", () => {
     const onSubmit = jest.fn();
     const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
-    userEvent.click(getByTestId('setMultipleIgnore'));
+    userEvent.click(getByTestId("setMultiple"));
+    userEvent.click(container.querySelector('input[type="submit"]')!);
+    expect(onSubmit).toHaveBeenCalledWith({
+      nested: {
+        value: "multiple set 0",
+      },
+      value: "multiple set 1",
+    });
+  });
+
+  it("ignores fields not explicitely passed in", () => {
+    const onSubmit = jest.fn();
+    const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
+    userEvent.click(getByTestId("setMultipleIgnore"));
     userEvent.type(
       container.querySelector('input[name="value"]')!,
-      'typed in value'
+      "typed in value"
     );
     userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
-        value: 'ignoring some',
+        value: "ignoring some",
       },
-      value: 'typed in value',
+      value: "typed in value",
     });
   });
 });

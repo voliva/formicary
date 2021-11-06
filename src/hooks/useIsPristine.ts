@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FormRef } from '../internal/formRef';
-import { getMapValue } from '../internal/path';
-import { combine, distinctUntilChanged, map, switchMap } from 'derive-state';
-import { useHookParams } from '../internal/useHookParams';
+import { useEffect, useMemo, useState } from "react";
+import { FormRef } from "../internal/formRef";
+import { getMapValue } from "../internal/path";
+import { combine, distinctUntilChanged, map, switchMap } from "derive-state";
+import { useHookParams } from "../internal/useHookParams";
 
 export function useIsPristine<TValues>(formRef?: FormRef<TValues>): boolean {
   const [_formRef] = useHookParams<TValues>([formRef]);
@@ -11,9 +11,9 @@ export function useIsPristine<TValues>(formRef?: FormRef<TValues>): boolean {
     () =>
       _formRef.registeredKeys
         .pipe(
-          switchMap(keys =>
+          switchMap((keys) =>
             combine(
-              Array.from(keys).map(key => {
+              Array.from(keys).map((key) => {
                 const initialValue$ = getMapValue(key, _formRef.initialValues);
                 const value$ = getMapValue(key, _formRef.values);
                 return combine({
@@ -23,7 +23,7 @@ export function useIsPristine<TValues>(formRef?: FormRef<TValues>): boolean {
                   map(({ initialValue, value }) => initialValue === value)
                 );
               })
-            ).pipe(map(results => results.every(pristine => pristine)))
+            ).pipe(map((results) => results.every((pristine) => pristine)))
           ),
           distinctUntilChanged()
         )

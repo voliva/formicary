@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { createFormRef, FormRef, FormRefOptions } from '../internal/formRef';
+import { useEffect, useRef } from "react";
+import { createFormRef, FormRef, FormRefOptions } from "../internal/formRef";
 
 export const useForm = <
   TValues extends Record<string, any> = Record<string, any>

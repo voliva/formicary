@@ -2,7 +2,7 @@
   "version": "0.2.5",
   "license": "MIT",
   "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "typings": "dist/types/index.d.ts",
   "files": [
     "dist",
     "src"
@@ -11,22 +11,13 @@
     "node": ">=10"
   },
   "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test --passWithNoTests",
-    "lint": "tsdx lint",
-    "prepare": "tsdx build",
-    "size": "size-limit",
-    "analyze": "size-limit --why"
+    "build": "node build.js",
+    "test": "jest",
+    "lint": "eslint src/**/*",
+    "prepare": "node build.js"
   },
   "peerDependencies": {
-    "react": ">=16"
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
+    "react": ">=17"
   },
   "name": "formicary",
   "author": "Víctor Oliva",
@@ -36,34 +27,37 @@
   },
   "module": "dist/formicary.esm.js",
   "sideEffects": false,
-  "size-limit": [
-    {
-      "path": "dist/formicary.cjs.production.min.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/formicary.esm.js",
-      "limit": "10 KB"
-    }
-  ],
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^4.6.0",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/react-hooks": "^3.4.2",
-    "@testing-library/user-event": "^12.1.8",
-    "@types/react": "^16.9.53",
-    "@types/react-dom": "^16.9.8",
-    "husky": "^4.3.0",
-    "react": "^16.14.0",
-    "react-dom": "^16.14.0",
-    "react-test-renderer": "^17.0.1",
-    "size-limit": "^4.6.0",
-    "tsdx": "^0.14.1",
-    "tslib": "^2.0.3",
-    "typescript": "^4.0.3"
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.0",
+    "@babel/preset-react": "^7.16.0",
+    "@babel/preset-typescript": "^7.16.0",
+    "@testing-library/jest-dom": "^5.15.0",
+    "@testing-library/react": "^12.1.2",
+    "@testing-library/react-hooks": "^7.0.2",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/babel__core": "^7.1.16",
+    "@types/jest": "^27.0.2",
+    "@types/react": "^17.0.34",
+    "@types/react-dom": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.3.0",
+    "@typescript-eslint/parser": "^5.3.0",
+    "babel-jest": "^27.3.1",
+    "esbuild": "^0.13.12",
+    "eslint": "^8.2.0",
+    "eslint-plugin-react": "^7.26.1",
+    "jest": "^27.3.1",
+    "prettier": "^2.4.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-test-renderer": "^17.0.2",
+    "tslib": "^2.3.1",
+    "typescript": "^4.4.4"
   },
   "dependencies": {
     "derive-state": "0.1.0-alpha.8"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
   }
 }

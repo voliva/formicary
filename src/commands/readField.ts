@@ -1,5 +1,5 @@
-import { FormRef } from '../internal/formRef';
-import { getMapValue, KeySelector } from '../internal/path';
+import { FormRef } from "../internal/formRef";
+import { getMapValue, KeySelector } from "../internal/path";
 
 export const readField = <T, V>(
   formRef: FormRef<T>,

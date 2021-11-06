@@ -4,11 +4,11 @@ import {
   map,
   switchMap,
   withDefault,
-} from 'derive-state';
-import { useEffect, useMemo, useState } from 'react';
-import { FormRef } from '../internal/formRef';
-import { buildObject } from '../internal/path';
-import { useHookParams } from '../internal/useHookParams';
+} from "derive-state";
+import { useEffect, useMemo, useState } from "react";
+import { FormRef } from "../internal/formRef";
+import { buildObject } from "../internal/path";
+import { useHookParams } from "../internal/useHookParams";
 
 export function useFormValue<T, R>(
   mapFn: (value: T) => R,
@@ -28,11 +28,11 @@ export function useFormValue<T, R>(...args: any[]): R {
     () =>
       formRef.registeredKeys
         .pipe(
-          map(set => Array.from(set)),
-          switchMap(keys =>
+          map((set) => Array.from(set)),
+          switchMap((keys) =>
             combine(
               Object.fromEntries(
-                keys.map(key => [
+                keys.map((key) => [
                   key,
                   formRef.values
                     .get(key)!
@@ -41,7 +41,7 @@ export function useFormValue<T, R>(...args: any[]): R {
               )
             )
           ),
-          map(formValues => mapFn(buildObject(formValues))),
+          map((formValues) => mapFn(buildObject(formValues))),
           distinctUntilChanged(eqFn)
         )
         .capture(),

@@ -1,5 +1,5 @@
-import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
-import { KeySelector } from '../internal/path';
+import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
+import { KeySelector } from "../internal/path";
 
 export const setFieldError = <TValues>(
   formRef: FormRef<TValues>,
@@ -7,9 +7,7 @@ export const setFieldError = <TValues>(
   error: ErrorResult
 ) => {
   try {
-    getControlState(formRef, keySelector)
-      .getValue()
-      .manualError.emit(error);
+    getControlState(formRef, keySelector).getValue().manualError.emit(error);
   } catch (ex) {
     console.warn("Can't set error: Field not registered", ex);
   }

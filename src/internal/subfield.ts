@@ -1,4 +1,4 @@
-const IS_SUBFIELD = Symbol('is subfield');
+const IS_SUBFIELD = Symbol("is subfield");
 
 const setSubfield = (obj: any) => {
   obj[IS_SUBFIELD] = true;

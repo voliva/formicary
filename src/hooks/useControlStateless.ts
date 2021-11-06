@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { FormRef, getControlState, ControlOptions } from '../internal/formRef';
-import { getKey, getMapValue } from '../internal/path';
-import { useHookParams } from '../internal/useHookParams';
+import { useEffect } from "react";
+import { FormRef, getControlState, ControlOptions } from "../internal/formRef";
+import { getKey, getMapValue } from "../internal/path";
+import { useHookParams } from "../internal/useHookParams";
 
 export interface ControlStateless<T> {
   getValue: () => T;
@@ -41,7 +41,7 @@ export function useControlStateless<TValues, T>(
     touch: () => {
       const state$ = getControlState(formRef, key);
       state$.value.then(
-        value => {
+        (value) => {
           if (value.touched || state$.closed) return;
           state$.setValue({
             ...value,

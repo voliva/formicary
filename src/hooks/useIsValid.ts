@@ -1,20 +1,20 @@
-import { combine, just, map, switchMap, take, withDefault } from 'derive-state';
-import { useEffect, useMemo, useState } from 'react';
-import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector } from '../internal/path';
-import { useHookParams } from '../internal/useHookParams';
+import { combine, just, map, switchMap, take, withDefault } from "derive-state";
+import { useEffect, useMemo, useState } from "react";
+import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
+import { getKeys, KeysSelector } from "../internal/path";
+import { useHookParams } from "../internal/useHookParams";
 
 const ALL_KEYS = {};
 export function useIsValid<TValues>(
   defaultValue?: boolean,
   keysSelector?: KeysSelector<TValues>
-): boolean | 'pending';
+): boolean | "pending";
 export function useIsValid<TValues>(
   formRef: FormRef<TValues>,
   defaultValue?: boolean,
   keysSelector?: KeysSelector<TValues>
-): boolean | 'pending';
-export function useIsValid<TValues>(...args: any[]): boolean | 'pending' {
+): boolean | "pending";
+export function useIsValid<TValues>(...args: any[]): boolean | "pending" {
   const [formRef, defaultValue = false, keysSelector] = useHookParams<
     TValues,
     [boolean | undefined, KeysSelector<TValues> | undefined]
@@ -24,25 +24,25 @@ export function useIsValid<TValues>(...args: any[]): boolean | 'pending' {
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
-        ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
+        ? formRef.registeredKeys.pipe(map((set) => Array.from(set)))
         : just(keys);
 
     return keys$.pipe(
-      switchMap(keys =>
+      switchMap((keys) =>
         combine(
           Object.fromEntries(
-            keys.map(key => [
+            keys.map((key) => [
               key,
               getControlState(formRef, key).pipe(
                 take(1),
-                switchMap(v => v.error$),
+                switchMap((v) => v.error$),
                 withDefault(false)
               ),
             ])
           )
         )
       ),
-      map(results =>
+      map((results) =>
         Object.fromEntries(
           Object.entries(results).filter(([, value]) => value !== false) as [
             string,
@@ -57,24 +57,24 @@ export function useIsValid<TValues>(...args: any[]): boolean | 'pending' {
     () =>
       error$
         .pipe(
-          map(errors => {
+          map((errors) => {
             const errorValues = Object.values(errors);
             let hasPending = false;
-            const hasError = errorValues.some(error => {
-              if (error === 'pending') {
+            const hasError = errorValues.some((error) => {
+              if (error === "pending") {
                 hasPending = true;
                 return false;
               }
               return true;
             });
-            return hasError ? false : hasPending ? 'pending' : true;
+            return hasError ? false : hasPending ? "pending" : true;
           })
         )
         .capture(),
     [error$]
   );
 
-  const [isValid, setIsValid] = useState<boolean | 'pending'>(() => {
+  const [isValid, setIsValid] = useState<boolean | "pending">(() => {
     if (isValid$.hasValue()) {
       return isValid$.getValue();
     }

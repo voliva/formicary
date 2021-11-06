@@ -5,10 +5,10 @@ import {
   map,
   switchMap,
   withDefault,
-} from 'derive-state';
-import { useEffect, useMemo, useState } from 'react';
-import { ErrorResult, FormRef, getControlState } from '../internal/formRef';
-import { getKeys, KeysSelector } from '../internal/path';
+} from "derive-state";
+import { useEffect, useMemo, useState } from "react";
+import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
+import { getKeys, KeysSelector } from "../internal/path";
 
 const ALL_KEYS = {};
 export const useErrors = <TValues>(
@@ -19,27 +19,27 @@ export const useErrors = <TValues>(
   const error$ = useMemo(() => {
     const keys$ =
       keys[0] === ALL_KEYS
-        ? formRef.registeredKeys.pipe(map(set => Array.from(set)))
+        ? formRef.registeredKeys.pipe(map((set) => Array.from(set)))
         : just(keys);
 
     return keys$
       .pipe(
-        switchMap(keys =>
+        switchMap((keys) =>
           combine(
             Object.fromEntries(
-              keys.map(key => [
+              keys.map((key) => [
                 key,
                 getControlState(formRef, key).pipe(
-                  map(v => (v.touched ? v.error$ : FALSE)),
+                  map((v) => (v.touched ? v.error$ : FALSE)),
                   withDefault(FALSE),
                   distinctUntilChanged(),
-                  switchMap(v => v)
+                  switchMap((v) => v)
                 ),
               ])
             )
           )
         ),
-        map(results =>
+        map((results) =>
           Object.fromEntries(
             Object.entries(results).filter(([, value]) => value !== false) as [
               string,
@@ -61,7 +61,7 @@ export const useErrors = <TValues>(
   });
 
   useEffect(() => {
-    error$.subscribe(x => setErrors(() => x));
+    error$.subscribe((x) => setErrors(() => x));
     return () => error$.close();
   }, [error$]);
 

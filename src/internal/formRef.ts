@@ -11,9 +11,9 @@ import {
   take,
   withDefault,
   StatelessObservable,
-} from 'derive-state';
-import { FieldValidator, noopValidator } from '../validators';
-import { getKey, getKeyValues, getMapValue, KeySelector } from './path';
+} from "derive-state";
+import { FieldValidator, noopValidator } from "../validators";
+import { getKey, getKeyValues, getMapValue, KeySelector } from "./path";
 
 export interface ControlOptions<TValues, T> {
   key: KeySelector<TValues, T>;
@@ -34,7 +34,7 @@ export interface FormRefOptions<TValue> {
   initialValue?: TValue;
 }
 
-export type ErrorResult = string[] | 'pending' | false;
+export type ErrorResult = string[] | "pending" | false;
 export interface ControlState<T> {
   touched: boolean;
   validator: FieldValidator<T>;
@@ -91,7 +91,7 @@ export const createFormRef = <
         error$: createError$({
           key,
           validator$: control$.pipe(
-            map(control => control.validator),
+            map((control) => control.validator),
             withDefault(validator),
             distinctUntilChanged()
           ),
@@ -130,9 +130,9 @@ export const createFormRef = <
     controlStates,
     values,
     dispose: () => {
-      Array.from(initialValues.values()).forEach(state => state.close());
-      Array.from(values.values()).forEach(state => state.close());
-      Array.from(controlStates.values()).forEach(state => {
+      Array.from(initialValues.values()).forEach((state) => state.close());
+      Array.from(values.values()).forEach((state) => state.close());
+      Array.from(controlStates.values()).forEach((state) => {
         if (state.hasValue()) {
           state.getValue().error$.close();
         }
@@ -148,10 +148,10 @@ export const createFormRef = <
 
 export function isFormRef(value: unknown): value is FormRef<any> {
   return !!(
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value &&
-    'registeredKeys' in value &&
-    'registerControl' in value
+    "registeredKeys" in value &&
+    "registerControl" in value
   );
 }
 
@@ -169,27 +169,27 @@ const createError$ = <T>(params: {
 }): StatelessObservable<ErrorResult> => {
   const { key, validator$, value$, getControlValue$ } = params;
 
-  const validationError$ = new Stateless<ErrorResult>(obs => {
+  const validationError$ = new Stateless<ErrorResult>((obs) => {
     const dependenciesObserved = new Set<StateObservable<any>>();
 
     let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
-    validator$.subscribe(v => (latestValidator = v));
+    validator$.subscribe((v) => (latestValidator = v));
 
     let latestValue: T | typeof EMPTY = EMPTY;
-    value$.subscribe(v => {
+    value$.subscribe((v) => {
       latestValue = v;
       runValidator();
     });
 
     function runValidator() {
       if (latestValidator === EMPTY) {
-        throw new Error('No validator defined'); // TODO shouldn't ever happen
+        throw new Error("No validator defined"); // TODO shouldn't ever happen
       }
       if (latestValue === EMPTY) {
-        throw new Error('No validator defined'); // TODO shouldn't ever happen
+        throw new Error("No validator defined"); // TODO shouldn't ever happen
       }
       try {
-        const result = latestValidator(latestValue, keySelector => {
+        const result = latestValidator(latestValue, (keySelector) => {
           const key = getKey(keySelector);
           const targetControlValue$ = getControlValue$(key);
 
@@ -202,16 +202,14 @@ const createError$ = <T>(params: {
           }
           return targetControlValue$.getValue();
         });
-        if (typeof result === 'boolean') {
+        if (typeof result === "boolean") {
           return obs.next(result === true ? false : []);
         }
         if (Array.isArray(result)) {
           return obs.next(result);
         }
-        obs.next('pending');
-        result.then(result =>
-          obs.next(result === true ? false : result === false ? [] : result)
-        );
+        obs.next("pending");
+        result.then((result) => obs.next(result === true ? false : result));
       } catch (ex) {
         if (ex instanceof ValueNotThereYetError) {
           console.warn(
@@ -221,22 +219,22 @@ const createError$ = <T>(params: {
         } else {
           console.error(ex); // TODO how to propagate into an error boundary? :|
         }
-        return obs.next('pending' as const);
+        return obs.next("pending" as const);
       }
     }
   });
 
-  const manualError$ = new Stateless<ErrorResult>(obs => {
+  const manualError$ = new Stateless<ErrorResult>((obs) => {
     obs.next(false);
     let innerUnsub = (): void => void 0;
-    const outerUnsub = params.manualError$.subscribe(error => {
+    const outerUnsub = params.manualError$.subscribe((error) => {
       obs.next(error);
       innerUnsub();
       innerUnsub = value$
         .pipe(
           skipSynchronous(),
           take(1),
-          map(() => false as false)
+          map(() => false as const)
         )
         .subscribe(obs.next);
     });
@@ -253,9 +251,9 @@ const createError$ = <T>(params: {
 
   return errors.pipe(
     map(({ validatorResult, manualResult }) => {
-      if (manualResult === false || manualResult === 'pending')
+      if (manualResult === false || manualResult === "pending")
         return validatorResult;
-      if (validatorResult === false || validatorResult === 'pending')
+      if (validatorResult === false || validatorResult === "pending")
         return manualResult;
       return [...manualResult, ...validatorResult];
     })
@@ -265,10 +263,10 @@ const createError$ = <T>(params: {
 class ValueNotThereYetError extends Error {
   constructor(key: string) {
     super(`Control ${key} doesn't have any value yet`);
-    this.name = 'ValueNotThereYetError';
+    this.name = "ValueNotThereYetError";
 
     Object.setPrototypeOf(this, ValueNotThereYetError.prototype);
   }
 }
 
-const EMPTY = Symbol('empty');
+const EMPTY = Symbol("empty");

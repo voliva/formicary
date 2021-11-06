@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { FormRef } from '../internal/formRef';
-import { getMapValue, KeySelector } from '../internal/path';
-import { useHookParams } from '../internal/useHookParams';
-import { useLatestRef } from '../internal/useLatestRef';
+import { useEffect } from "react";
+import { FormRef } from "../internal/formRef";
+import { getMapValue, KeySelector } from "../internal/path";
+import { useHookParams } from "../internal/useHookParams";
+import { useLatestRef } from "../internal/useLatestRef";
 
 export function useFieldChanges<TValues, T>(
   keySelector: KeySelector<TValues, T>,
@@ -23,7 +23,7 @@ export function useFieldChanges<TValues, T>(...args: any[]): void {
   const value$ = getMapValue(keySelector, formRef.values);
   useEffect(() => {
     let isInitial = true;
-    return value$.subscribe(value => {
+    return value$.subscribe((value) => {
       onChangeRef.current(value, isInitial);
       isInitial = false;
     });

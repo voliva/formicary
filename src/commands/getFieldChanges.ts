@@ -1,5 +1,5 @@
-import { FormRef } from '../internal/formRef';
-import { getMapValue } from '../internal/path';
+import { FormRef } from "../internal/formRef";
+import { getMapValue } from "../internal/path";
 
 export function getFieldChanges<TValues>(
   formRef: FormRef<TValues>
@@ -7,7 +7,7 @@ export function getFieldChanges<TValues>(
   const keys = formRef.registeredKeys.getValue();
 
   return Array.from(keys)
-    .map(key => {
+    .map((key) => {
       const initialValue$ = getMapValue(key, formRef.initialValues);
       const value$ = getMapValue(key, formRef.values);
       if (!initialValue$.hasValue() || !value$.hasValue()) {
@@ -19,5 +19,5 @@ export function getFieldChanges<TValues>(
 
       return { key, initial, value };
     })
-    .filter(change => change && change.initial !== change.value);
+    .filter((change) => change && change.initial !== change.value);
 }

@@ -1,5 +1,5 @@
-import { FormRef } from '../internal/formRef';
-import { buildObject } from '../internal/path';
+import { FormRef } from "../internal/formRef";
+import { buildObject } from "../internal/path";
 
 export const readForm = <T>(formRef: FormRef<T>): T =>
   buildObject(
