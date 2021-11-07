@@ -1,42 +1,35 @@
 import { State } from "derive-state";
 import { isSubfield } from "./subfield";
 
-export type KeySelector<TValues, T> = string | ((values: TValues) => T);
-export type KeysSelector<TValues> = string[] | ((values: TValues) => any[]);
-
-const path = Symbol("path");
-export const getKey = (keySelector: KeySelector<any, any>): string => {
-  if (typeof keySelector === "string") return keySelector;
-  const proxy = new Proxy({ path: "" }, getProxyHandler(false));
-  const result = keySelector(proxy);
-  if (result !== proxy) {
-    throw new Error(
-      `You must return a value from the argument in the selector function`
-    );
-  }
-  return result[path];
+type MappedKey<K extends string, V> = `${K}${V extends Record<string, any>
+  ? `.${Paths<V>}`
+  : ""}`;
+type KeyMap<T> = {
+  [K in keyof T & string]: MappedKey<K, T[K]>;
 };
-export const getMapValue = (
-  keySelector: KeySelector<any, any>,
-  map: Map<string, State<any>>
-) => {
-  const key = getKey(keySelector);
+export type Paths<T> = KeyMap<T>[keyof T & string];
+
+export type ValueOfPath<TValues, Path> = Path extends keyof TValues
+  ? TValues[Path]
+  : Path extends `${infer Prop}.${infer Rest}`
+  ? Prop extends keyof TValues
+    ? ValueOfPath<TValues[Prop], Rest>
+    : unknown
+  : unknown;
+
+export function key<T>(path: Paths<T>) {
+  return path;
+}
+export function createKeyFn<T>() {
+  return <P extends Paths<T>>(path: P) => path;
+}
+
+export const getMapValue = (key: string, map: Map<string, State<any>>) => {
   if (!map.has(key)) {
     map.set(key, new State<any>());
   }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return map.get(key)!;
-};
-
-export const getKeys = (keysSelector: KeysSelector<any>): string[] => {
-  if (typeof keysSelector === "object") return keysSelector;
-  const proxy = new Proxy({ path: "" }, getProxyHandler(true));
-  const result = keysSelector(proxy);
-  // if (result.some(r => !(r instanceof Proxy))) {
-  //   throw new Error(
-  //     `You must return a value from the argument in the selector function`
-  //   );
-  // }
-  return result.map((r) => r[path]);
 };
 
 export const getKeyValues = (input: any) => {
@@ -130,39 +123,6 @@ const getPropType = (key: string) => {
     return "object" as const;
   }
   return "array" as const;
-};
-
-const getProxyHandler = (
-  preserveRoot: boolean
-): ProxyHandler<{ path: string }> => {
-  const handler: ProxyHandler<{ path: string }> = {
-    get: (target, prop, receiver) => {
-      if (prop === path) {
-        return target.path;
-      }
-      if (typeof prop === "symbol") {
-        throw new Error(`Can't serialize symbols to keys`);
-      }
-      const newPath =
-        typeof prop === "number" || !isNaN(prop as any)
-          ? `${target.path}[${prop}]`
-          : target.path.length
-          ? `${target.path}.${prop}`
-          : prop;
-
-      if (preserveRoot && target.path.length === 0)
-        return new Proxy(
-          {
-            path: newPath,
-          },
-          handler
-        );
-      target.path = newPath;
-
-      return receiver;
-    },
-  };
-  return handler;
 };
 
 const isPlainObject = (value: any) =>

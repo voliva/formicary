@@ -1,12 +1,17 @@
 import { FormRef } from "../internal/formRef";
-import { getKeyValues, getMapValue, KeySelector } from "../internal/path";
+import {
+  getKeyValues,
+  getMapValue,
+  Paths,
+  ValueOfPath,
+} from "../internal/path";
 
-export const setFieldValue = <TValues, T>(
+export const setFieldValue = <TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
-  keySelector: KeySelector<TValues, T>,
-  value: T
+  key: P,
+  value: ValueOfPath<TValues, P>
 ) => {
-  getMapValue(keySelector, formRef.values).setValue(value);
+  getMapValue(key, formRef.values).setValue(value);
 };
 
 export const setFormValue = <TValues, T>(

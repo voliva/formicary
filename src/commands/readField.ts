@@ -1,10 +1,10 @@
 import { FormRef } from "../internal/formRef";
-import { getMapValue, KeySelector } from "../internal/path";
+import { getMapValue, Paths, ValueOfPath } from "../internal/path";
 
-export const readField = <T, V>(
+export const readField = <T, P extends Paths<T>>(
   formRef: FormRef<T>,
-  key: KeySelector<T, V>
-): V | undefined => {
+  key: P
+): ValueOfPath<T, P> | undefined => {
   try {
     return getMapValue(key, formRef.values).getValue();
   } catch (ex) {

@@ -13,16 +13,16 @@ import {
   StatelessObservable,
 } from "derive-state";
 import { FieldValidator, noopValidator } from "../validators";
-import { getKey, getKeyValues, getMapValue, KeySelector } from "./path";
+import { getKeyValues, getMapValue, Paths, ValueOfPath } from "./path";
 
 export interface ControlOptions<TValues, T> {
-  key: KeySelector<TValues, T>;
+  key: Paths<TValues>;
   initialValue: T;
   validator?: FieldValidator<T, TValues>;
 }
 
 export interface FormRef<TValues extends Record<string, any>> {
-  registeredKeys: State<Set<string>>;
+  registeredKeys: State<Set<Paths<TValues>>>;
   registerControl: (options: ControlOptions<TValues, any>) => void;
   initialValues: Map<string, State<any>>;
   values: Map<string, State<any>>;
@@ -49,10 +49,10 @@ export const createFormRef = <
     initialValue?: TValues;
   } = {}
 ): FormRef<TValues> => {
-  const initialValues = new Map<string, State<any>>();
+  const initialValues = new Map<Paths<TValues>, State<any>>();
   Object.entries(getKeyValues(options.initialValue || {})).forEach(
     ([key, value]) => {
-      initialValues.set(key, new State(value));
+      initialValues.set(key as Paths<TValues>, new State(value));
     }
   );
 
@@ -62,7 +62,7 @@ export const createFormRef = <
     )
   );
 
-  const registeredKeys = new State(new Set<string>(values.keys()));
+  const registeredKeys = new State(new Set<Paths<TValues>>(values.keys()));
 
   /**
    * Same structure as TValues, but every value is a ControlState
@@ -73,10 +73,9 @@ export const createFormRef = <
 
   const registerControl = ({
     initialValue,
-    key: keySelector,
+    key,
     validator = noopValidator,
   }: ControlOptions<TValues, any>) => {
-    const key = getKey(keySelector);
     const value$ = getControlValue$(key);
     const control$: State<ControlState<any>> = getMapValue(key, controlStates);
     if (!control$.hasValue()) {
@@ -155,10 +154,13 @@ export function isFormRef(value: unknown): value is FormRef<any> {
   );
 }
 
-export const getControlState = <TValues, T>(
+export const getControlState = <TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
-  key: KeySelector<TValues, T>
-) => getMapValue(key, formRef.controlStates) as State<ControlState<T>>;
+  key: P
+) =>
+  getMapValue(key, formRef.controlStates) as State<
+    ControlState<ValueOfPath<TValues, P>>
+  >;
 
 const createError$ = <T>(params: {
   key: string;
@@ -189,8 +191,7 @@ const createError$ = <T>(params: {
         throw new Error("No validator defined"); // TODO shouldn't ever happen
       }
       try {
-        const result = latestValidator(latestValue, (keySelector) => {
-          const key = getKey(keySelector);
+        const result = latestValidator(latestValue, (key) => {
           const targetControlValue$ = getControlValue$(key);
 
           if (!dependenciesObserved.has(targetControlValue$)) {

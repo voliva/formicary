@@ -11,7 +11,7 @@ export const useForm = <
     ref.current = createFormRef<TValues>(options);
   }
 
-  useEffect(() => () => ref.current!.dispose(), []);
+  useEffect(() => () => ref.current?.dispose(), []);
 
   return ref.current;
 };

@@ -11,6 +11,7 @@ export function getFieldChanges<TValues>(
       const initialValue$ = getMapValue(key, formRef.initialValues);
       const value$ = getMapValue(key, formRef.values);
       if (!initialValue$.hasValue() || !value$.hasValue()) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         return null!;
       }
 

@@ -1,25 +1,24 @@
 import { combine, just, map, switchMap, take, withDefault } from "derive-state";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
-import { getKeys, KeysSelector } from "../internal/path";
+import { Paths } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
 const ALL_KEYS = {};
 export function useIsValid<TValues>(
   defaultValue?: boolean,
-  keysSelector?: KeysSelector<TValues>
+  keys?: Paths<TValues>[]
 ): boolean | "pending";
 export function useIsValid<TValues>(
   formRef: FormRef<TValues>,
   defaultValue?: boolean,
-  keysSelector?: KeysSelector<TValues>
+  keys?: Paths<TValues>[]
 ): boolean | "pending";
 export function useIsValid<TValues>(...args: any[]): boolean | "pending" {
-  const [formRef, defaultValue = false, keysSelector] = useHookParams<
-    TValues,
-    [boolean | undefined, KeysSelector<TValues> | undefined]
-  >(args);
-  const keys = keysSelector ? getKeys(keysSelector) : ([ALL_KEYS] as string[]);
+  const [formRef, defaultValue = false, keys = [ALL_KEYS] as Paths<TValues>[]] =
+    useHookParams<TValues, [boolean | undefined, Paths<TValues>[] | undefined]>(
+      args
+    );
 
   const error$ = useMemo(() => {
     const keys$ =

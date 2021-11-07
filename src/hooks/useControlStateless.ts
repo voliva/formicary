@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { FormRef, getControlState, ControlOptions } from "../internal/formRef";
-import { getKey, getMapValue } from "../internal/path";
+import { getMapValue } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
 export interface ControlStateless<T> {
@@ -24,7 +24,7 @@ export function useControlStateless<TValues, T>(
     TValues,
     [ControlOptions<TValues, T>]
   >(args);
-  const key = getKey(options.key);
+  const { key } = options;
 
   useEffect(() => {
     formRef.registerControl(options);

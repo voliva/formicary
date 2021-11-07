@@ -1,4 +1,4 @@
-import { KeySelector } from "./internal/path";
+import { Paths, ValueOfPath } from "./internal/path";
 
 const validatorMessages = {
   isNumber: () => "Expected a number",
@@ -9,6 +9,7 @@ const validatorMessages = {
     "Expected a value greater than " + threshold,
   isAtMost: (threshold: number) => "Expected a value of at most " + threshold,
   isLessThan: (threshold: number) => "Expected a value less than " + threshold,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   matches: (regex: RegExp) => "Invalid Value",
 };
 
@@ -25,7 +26,7 @@ export type PureValidator<T> = (
 ) => true | string[] | Promise<true | string[]>;
 export type FieldValidator<T, TValues = any> = (
   value: T,
-  getValue: (key: KeySelector<TValues, T>) => any
+  getValue: <P extends Paths<TValues>>(key: P) => ValueOfPath<TValues, P>
 ) => true | string[] | Promise<true | string[]>;
 
 type ValidatorParam<T> = T | ((getValue: (key: string) => any) => T);
@@ -180,7 +181,7 @@ export const mergeValidators: ValidatorComposer =
 export function conditionalValidator<T, TValues>(
   condition: (
     value: T,
-    getValue: (key: KeySelector<TValues, T>) => any
+    getValue: <P extends Paths<TValues>>(key: P) => ValueOfPath<TValues, P>
   ) => boolean,
   validator: PureValidator<T> | FieldValidator<T, TValues>
 ): FieldValidator<T, TValues> {

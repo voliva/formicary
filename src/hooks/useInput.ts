@@ -1,28 +1,28 @@
 import { MutableRefObject, useEffect, useRef } from "react";
 import { FormRef, getControlState } from "../internal/formRef";
-import { getKey, getMapValue, KeySelector } from "../internal/path";
+import { getMapValue, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 import { FieldValidator } from "../validators";
 
-export type InputOptions<T, TValues> = {
+export type InputOptions<TValues, P extends Paths<TValues>> = {
   elementProp?: string;
   eventType?: "input" | "onChange";
-  key?: KeySelector<TValues, T>;
-  validator?: FieldValidator<T, TValues>;
+  key?: P;
+  validator?: FieldValidator<ValueOfPath<TValues, P>, TValues>;
   initialValue?: string | boolean;
 };
 
-export function useInput<TValues, T>(
-  options?: InputOptions<TValues, T>
+export function useInput<TValues, P extends Paths<TValues>>(
+  options?: InputOptions<TValues, P>
 ): MutableRefObject<HTMLInputElement | null>;
-export function useInput<TValues, T>(
+export function useInput<TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
-  options?: InputOptions<TValues, T>
+  options?: InputOptions<TValues, P>
 ): MutableRefObject<HTMLInputElement | null>;
-export function useInput<TValues, T>(...args: any[]) {
+export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
   const [formRef, options = {}] = useHookParams<
     TValues,
-    [InputOptions<T, TValues> | undefined]
+    [InputOptions<TValues, P> | undefined]
   >(args);
   const { eventType = "input", elementProp = "value" } = options;
   const ref = useRef<HTMLInputElement | null>(null);
@@ -33,7 +33,7 @@ export function useInput<TValues, T>(...args: any[]) {
       return;
     }
     const { initialValue = "", validator } = options;
-    const key: string = options.key ? getKey(options.key) : element.name;
+    const key = options.key ?? (element.name as Paths<TValues>);
     if (!key) {
       console.error(
         "An input is missing its key. Either supply it through useInput `key` option or through the input's name",

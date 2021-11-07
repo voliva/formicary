@@ -1,28 +1,29 @@
 import { useEffect, useState } from "react";
 import { FormRef } from "../internal/formRef";
-import { getMapValue, KeySelector } from "../internal/path";
+import { getMapValue, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
-export function useFieldValue<TValues, T>(
-  keySelector: KeySelector<TValues, T>
-): T | undefined;
-export function useFieldValue<TValues, T>(
+export function useFieldValue<TValues, P extends Paths<TValues>>(
+  key: P
+): ValueOfPath<TValues, P> | undefined;
+export function useFieldValue<TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
-  keySelector: KeySelector<TValues, T>
-): T | undefined;
-export function useFieldValue<TValues, T>(...args: any[]): T | undefined {
-  const [formRef, keySelector] = useHookParams<
-    TValues,
-    [KeySelector<TValues, T>]
-  >(args);
+  key: P
+): ValueOfPath<TValues, P> | undefined;
+export function useFieldValue<TValues, P extends Paths<TValues>>(
+  ...args: any[]
+): ValueOfPath<TValues, P> | undefined {
+  const [formRef, key] = useHookParams<TValues, [P]>(args);
 
-  const value$ = getMapValue(keySelector, formRef.values);
-  const [value, setValue] = useState<T | undefined>(() => {
-    if (value$.hasValue()) {
-      return value$.getValue();
+  const value$ = getMapValue(key, formRef.values);
+  const [value, setValue] = useState<ValueOfPath<TValues, P> | undefined>(
+    () => {
+      if (value$.hasValue()) {
+        return value$.getValue();
+      }
+      return undefined;
     }
-    return undefined;
-  });
+  );
 
   useEffect(() => value$.subscribe(setValue), [value$]);
 
