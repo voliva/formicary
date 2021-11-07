@@ -22,12 +22,19 @@ import { useState } from "react";
 import { useEffect } from "react";
 
 interface FormValue {
-  min: string;
+  min: number;
   max: string;
-  subcontrol: string;
+  subcontrol: {
+    foo: string;
+    bar: unknown;
+  };
+  array: Array<{
+    foo: "what";
+  }>;
 }
 
 const key = createKeyFn<FormValue>();
+key("array.0.foo");
 
 const Form = () => {
   const form = useForm<FormValue>({
@@ -48,7 +55,7 @@ const Form = () => {
     validator: pipeValidators(isRequired(), isNumber()),
   });
 
-  const min = useFieldValue(form, "min");
+  const min = useFieldValue(form, "subcontrol");
   // const min2 = useFieldValue(key("min"));
   const pristine = useIsPristine(form);
   const isValid = useIsValid(form);
@@ -88,9 +95,7 @@ const Form = () => {
 const SubComponent = () => {
   const control = useControl({
     initialValue: "something",
-    // without `keyFn` this shows an error of "s" | "s.${string}". It's annoying.
-    // it should just accept it and return unknown on that case...
-    key: key("subcontrol"),
+    key: key("min"),
   });
 
   return <div>{control.value}</div>;

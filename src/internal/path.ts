@@ -1,13 +1,17 @@
 import { State } from "derive-state";
 import { isSubfield } from "./subfield";
 
-type MappedKey<K extends string, V> = `${K}${V extends Record<string, any>
-  ? `.${Paths<V>}`
-  : ""}`;
+type MappedKey<K extends string, V> =
+  | K
+  | `${K}${V extends Array<infer A>
+      ? `.${number}` | `.${number}.${Paths<A>}`
+      : V extends Record<string, any>
+      ? `.${Paths<V>}`
+      : ""}`;
 type KeyMap<T> = {
   [K in keyof T & string]: MappedKey<K, T[K]>;
 };
-export type Paths<T> = unknown extends T ? string : KeyMap<T>[keyof T & string];
+export type Paths<T> = KeyMap<T>[keyof T & string];
 
 export type ValueOfPath<TValues, Path> = Path extends keyof TValues
   ? TValues[Path]
