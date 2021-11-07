@@ -1,13 +1,13 @@
 import { combine, just, map, switchMap, take, withDefault } from "derive-state";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
-import { Paths } from "../internal/path";
+import { Key, Paths } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
 const ALL_KEYS = {};
 export function useIsValid<TValues>(
   defaultValue?: boolean,
-  keys?: Paths<TValues>[]
+  keys?: Key<TValues, Paths<TValues>>[]
 ): boolean | "pending";
 export function useIsValid<TValues>(
   formRef: FormRef<TValues>,

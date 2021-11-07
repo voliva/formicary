@@ -15,7 +15,7 @@ export * from "./context";
 
 export { FormRef } from "./internal/formRef";
 export { subfield } from "./internal/subfield";
-export { Paths, ValueOfPath } from "./internal/path";
+export { Paths, ValueOfPath, createKeyFn } from "./internal/path";
 
 /* TODO
 - Remove/cleanup unused fields (need refcount?)

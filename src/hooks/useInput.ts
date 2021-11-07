@@ -1,13 +1,13 @@
 import { MutableRefObject, useEffect, useRef } from "react";
 import { FormRef, getControlState } from "../internal/formRef";
-import { getMapValue, Paths, ValueOfPath } from "../internal/path";
+import { getMapValue, Key, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 import { FieldValidator } from "../validators";
 
 export type InputOptions<TValues, P extends Paths<TValues>> = {
   elementProp?: string;
   eventType?: "input" | "onChange";
-  key?: P;
+  key?: Key<TValues, P>;
   validator?: FieldValidator<ValueOfPath<TValues, P>, TValues>;
   initialValue?: string | boolean;
 };

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { FormRef } from "../internal/formRef";
-import { getMapValue, Paths, ValueOfPath } from "../internal/path";
+import { getMapValue, Key, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
 export function useFieldValue<TValues, P extends Paths<TValues>>(
-  key: P
+  key: Key<TValues, P>
 ): ValueOfPath<TValues, P> | undefined;
 export function useFieldValue<TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,

@@ -18,14 +18,14 @@ import {
 } from ".././src";
 import { useState } from "react";
 import { useEffect } from "react";
-import { createKeyFn, key as key2 } from "../src/internal/path";
 
 interface FormValue {
   min: number;
   max: number;
+  bar: string;
 }
 
-const key = createKeyFn<FormValue>();
+// const key = createKeyFn<FormValue>();
 
 const Form = () => {
   const form = useForm<FormValue>();
@@ -39,13 +39,8 @@ const Form = () => {
     validator: pipeValidators(isRequired(), isNumber()),
   });
 
-  // It's a bit fucked.... If you're using the context, I can't find a way to get the type for that.
-  // I thought `key` or `createKeyFn` would help with that, but they dont :(. They help to get the right path, but the value returned is unknown
   const min = useFieldValue(form, "min");
-  const v = key("min");
-  const min2 = useFieldValue(key("min"));
-  // Also, there's a bug somewhere. This keeps showing up "asdf" is not asignable to "a" | "a.${string}"
-  const v2 = key2("asdf");
+  // const min2 = useFieldValue(key("min"));
   const pristine = useIsPristine(form);
   const isValid = useIsValid(form);
 

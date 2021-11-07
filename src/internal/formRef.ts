@@ -13,10 +13,10 @@ import {
   StatelessObservable,
 } from "derive-state";
 import { FieldValidator, noopValidator } from "../validators";
-import { getKeyValues, getMapValue, Paths, ValueOfPath } from "./path";
+import { getKeyValues, getMapValue, Key, Paths, ValueOfPath } from "./path";
 
 export interface ControlOptions<TValues, T> {
-  key: Paths<TValues>;
+  key: Key<TValues, Paths<TValues>>;
   initialValue: T;
   validator?: FieldValidator<T, TValues>;
 }

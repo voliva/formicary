@@ -8,12 +8,15 @@ import {
 } from "derive-state";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
-import { Paths } from "../internal/path";
+import { Key, Paths } from "../internal/path";
 
 const ALL_KEYS = {};
 export const useErrors = <TValues>(
   formRef: FormRef<TValues>,
-  keys: Paths<TValues>[] = [ALL_KEYS] as Paths<TValues>[]
+  keys: Key<TValues, Paths<TValues>>[] = [ALL_KEYS] as Key<
+    TValues,
+    Paths<TValues>
+  >[]
 ) => {
   const error$ = useMemo(() => {
     const keys$ =

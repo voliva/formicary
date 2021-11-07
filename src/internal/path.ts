@@ -17,11 +17,12 @@ export type ValueOfPath<TValues, Path> = Path extends keyof TValues
     : unknown
   : unknown;
 
-export function key<T>(path: Paths<T>) {
-  return path;
-}
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Key<T, P extends Paths<T>> = P & {}; // This is actually a TS trick
+// the path is going to be just the string. But if we prevent TS from understanding it as a string
+// then we can infer the original `T` from that path, so that we can later on work with it
 export function createKeyFn<T>() {
-  return <P extends Paths<T>>(path: P) => path;
+  return <P extends Paths<T>>(path: P): Key<T, P> => path;
 }
 
 export const getMapValue = (key: string, map: Map<string, State<any>>) => {
