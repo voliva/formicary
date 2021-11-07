@@ -1,6 +1,6 @@
-import 'react-app-polyfill/ie11';
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import "react-app-polyfill/ie11";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 import {
   isAtMost,
   isNumber,
@@ -9,31 +9,43 @@ import {
   readForm,
   useInput,
   useForm,
-  useWatch,
+  useFieldValue,
   useErrors,
   useIsPristine,
   useIsValid,
   setFieldError,
   useControl,
-} from '.././src';
-import { useState } from 'react';
-import { useEffect } from 'react';
+} from ".././src";
+import { useState } from "react";
+import { useEffect } from "react";
+import { createKeyFn, key as key2 } from "../src/internal/path";
+
+interface FormValue {
+  min: number;
+  max: number;
+}
+
+const key = createKeyFn<FormValue>();
 
 const Form = () => {
-  const form = useForm<{
-    min: number;
-    max: number;
-  }>();
+  const form = useForm<FormValue>();
   const errors = useErrors(form);
   const minField = useInput(form, {
-    initialValue: '0',
-    validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
+    initialValue: "0",
+    validator: pipeValidators(isRequired(), isNumber(), isAtMost("max")),
   });
   const maxField = useInput(form, {
-    initialValue: '0',
-    validator: pipeValidators(isRequired, isNumber),
+    initialValue: "0",
+    validator: pipeValidators(isRequired(), isNumber()),
   });
-  const min = useWatch(form, v => v.min);
+
+  // It's a bit fucked.... If you're using the context, I can't find a way to get the type for that.
+  // I thought `key` or `createKeyFn` would help with that, but they dont :(. They help to get the right path, but the value returned is unknown
+  const min = useFieldValue(form, "min");
+  const v = key("min");
+  const min2 = useFieldValue(key("min"));
+  // Also, there's a bug somewhere. This keeps showing up "asdf" is not asignable to "a" | "a.${string}"
+  const v2 = key2("asdf");
   const pristine = useIsPristine(form);
   const isValid = useIsValid(form);
 
@@ -49,14 +61,14 @@ const Form = () => {
       <div>minErrors: {errors.min}</div>
       <div>maxErrors: {errors.max}</div>
       <div>Minimum: {min}</div>
-      <div>{pristine ? 'pristine' : 'dirty'}</div>
-      <div>{isValid ? 'valid' : 'invalid'}</div>
+      <div>{pristine ? "pristine" : "dirty"}</div>
+      <div>{isValid ? "valid" : "invalid"}</div>
       {pristine ? null : <SubComponent formRef={form} />}
       <button
         onClick={() => {
           const value = readForm(form);
           console.log(value);
-          setFieldError(form, v => v.max, [
+          setFieldError(form, "max", [
             `value ${value.max} is invalid (trololo)`,
           ]);
         }}
@@ -69,8 +81,8 @@ const Form = () => {
 
 const SubComponent = ({ formRef }) => {
   const control = useControl(formRef, {
-    initialValue: 'something',
-    key: 'subcontrol',
+    initialValue: "something",
+    key: "subcontrol",
   });
 
   return <div>{control.value}</div>;
@@ -84,4 +96,4 @@ const App = () => {
   );
 };
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById("root"));
