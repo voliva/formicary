@@ -24,7 +24,7 @@ export const setValidatorMessages = (
 export type PureValidator<T> = (
   value: T
 ) => true | string[] | Promise<true | string[]>;
-export type FieldValidator<T, TValues = any> = (
+export type Validator<T, TValues = any> = (
   value: T,
   getValue: <P extends Paths<TValues>>(key: P) => ValueOfPath<TValues, P>
 ) => true | string[] | Promise<true | string[]>;
@@ -70,7 +70,7 @@ export const isAtLeast =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): FieldValidator<number> =>
+  ): Validator<number> =>
   (value, getValue) => {
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) < thresholdValue) {
@@ -83,7 +83,7 @@ export const isGreaterThan =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): FieldValidator<number> =>
+  ): Validator<number> =>
   (value, getValue) => {
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) <= thresholdValue) {
@@ -96,7 +96,7 @@ export const isAtMost =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): FieldValidator<number> =>
+  ): Validator<number> =>
   (value, getValue) => {
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) > thresholdValue) {
@@ -109,7 +109,7 @@ export const isLessThan =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): FieldValidator<number> =>
+  ): Validator<number> =>
   (value, getValue) => {
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) >= thresholdValue) {
@@ -150,7 +150,7 @@ const recPipeValidators =
 
 interface ValidatorComposer {
   (...validators: Array<PureValidator<any>>): PureValidator<any>;
-  <TValues>(...validators: Array<FieldValidator<any, TValues>>): FieldValidator<
+  <TValues>(...validators: Array<Validator<any, TValues>>): Validator<
     any,
     TValues
   >;
@@ -183,8 +183,8 @@ export function conditionalValidator<T, TValues>(
     value: T,
     getValue: <P extends Paths<TValues>>(key: P) => ValueOfPath<TValues, P>
   ) => boolean,
-  validator: PureValidator<T> | FieldValidator<T, TValues>
-): FieldValidator<T, TValues> {
+  validator: PureValidator<T> | Validator<T, TValues>
+): Validator<T, TValues> {
   return (value, getValue) => {
     if (condition(value, getValue)) {
       return validator(value, getValue);
@@ -196,6 +196,6 @@ export function conditionalValidator<T, TValues>(
 export const noopValidator: PureValidator<any> = () => true;
 
 const validationResultIsAsync = (
-  result: ReturnType<FieldValidator<any>>
+  result: ReturnType<Validator<any>>
 ): result is Promise<any> =>
   typeof result === "object" && !Array.isArray(result);

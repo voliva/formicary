@@ -12,13 +12,13 @@ import {
   withDefault,
   StatelessObservable,
 } from "derive-state";
-import { FieldValidator, noopValidator } from "../validators";
+import { Validator, noopValidator } from "../validators";
 import { getKeyValues, getMapValue, Key, Paths, ValueOfPath } from "./path";
 
 export interface ControlOptions<TValues, T> {
   key: Key<TValues, Paths<TValues>>;
   initialValue: T;
-  validator?: FieldValidator<T, TValues>;
+  validator?: Validator<T, TValues>;
 }
 
 export interface FormRef<TValues extends Record<string, any>> {
@@ -37,7 +37,7 @@ export interface FormRefOptions<TValue> {
 export type ErrorResult = string[] | "pending" | false;
 export interface ControlState<T> {
   touched: boolean;
-  validator: FieldValidator<T>;
+  validator: Validator<T>;
   manualError: Stateless<ErrorResult>;
   error$: StateObservable<ErrorResult>;
 }
@@ -164,7 +164,7 @@ export const getControlState = <TValues, P extends Paths<TValues>>(
 
 const createError$ = <T>(params: {
   key: string;
-  validator$: Observable<FieldValidator<T>>;
+  validator$: Observable<Validator<T>>;
   value$: Observable<T>;
   manualError$: Observable<ErrorResult>;
   getControlValue$: (key: string) => StateObservable<any>;
@@ -174,7 +174,7 @@ const createError$ = <T>(params: {
   const validationError$ = new Stateless<ErrorResult>((obs) => {
     const dependenciesObserved = new Set<StateObservable<any>>();
 
-    let latestValidator: FieldValidator<T> | typeof EMPTY = EMPTY;
+    let latestValidator: Validator<T> | typeof EMPTY = EMPTY;
     validator$.subscribe((v) => (latestValidator = v));
 
     let latestValue: T | typeof EMPTY = EMPTY;
