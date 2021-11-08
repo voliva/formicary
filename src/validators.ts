@@ -34,6 +34,7 @@ type ValidatorParam<T> = T | ((getValue: (key: string) => any) => T);
 export const isNumber =
   (message?: string): PureValidator<any> =>
   (value) => {
+    if (isNil(value)) return true;
     if (isNaN(value)) {
       return [message ?? validatorMessages.isNumber()];
     }
@@ -43,6 +44,7 @@ export const isNumber =
 export const isInteger =
   (message?: string): PureValidator<any> =>
   (value) => {
+    if (isNil(value)) return true;
     if (parseInt(value) !== parseFloat(value)) {
       return [message ?? validatorMessages.isInteger()];
     }
@@ -52,9 +54,9 @@ export const isInteger =
 export const isRequired =
   (message?: string): PureValidator<any> =>
   (value) =>
-    value != null && value !== ""
-      ? true
-      : [message ?? validatorMessages.isRequired()];
+    isNil(value) || value === ""
+      ? [message ?? validatorMessages.isRequired()]
+      : true;
 
 const parseNumericParam = (
   value: string | ValidatorParam<number>,
@@ -70,8 +72,9 @@ export const isAtLeast =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): Validator<number> =>
+  ): Validator<Nilable<number>> =>
   (value, getValue) => {
+    if (isNil(value)) return true;
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) < thresholdValue) {
       return [message ?? validatorMessages.isAtLeast(thresholdValue)];
@@ -83,8 +86,9 @@ export const isGreaterThan =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): Validator<number> =>
+  ): Validator<Nilable<number>> =>
   (value, getValue) => {
+    if (isNil(value)) return true;
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) <= thresholdValue) {
       return [message ?? validatorMessages.isGreaterThan(thresholdValue)];
@@ -96,8 +100,9 @@ export const isAtMost =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): Validator<number> =>
+  ): Validator<Nilable<number>> =>
   (value, getValue) => {
+    if (isNil(value)) return true;
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) > thresholdValue) {
       return [message ?? validatorMessages.isAtMost(thresholdValue)];
@@ -109,8 +114,9 @@ export const isLessThan =
   (
     threshold: string | ValidatorParam<number>,
     message?: string
-  ): Validator<number> =>
+  ): Validator<Nilable<number>> =>
   (value, getValue) => {
+    if (isNil(value)) return true;
     const thresholdValue = parseNumericParam(threshold, getValue);
     if (Number(value) >= thresholdValue) {
       return [message ?? validatorMessages.isLessThan(thresholdValue)];
@@ -119,8 +125,9 @@ export const isLessThan =
   };
 
 export const matches =
-  (regex: RegExp, message?: string): PureValidator<string> =>
+  (regex: RegExp, message?: string): PureValidator<Nilable<string>> =>
   (value) => {
+    if (isNil(value)) return true;
     if (regex.test(value)) {
       return true;
     }
@@ -199,3 +206,6 @@ const validationResultIsAsync = (
   result: ReturnType<Validator<any>>
 ): result is Promise<any> =>
   typeof result === "object" && !Array.isArray(result);
+
+type Nilable<T> = T | undefined | null;
+const isNil = <T>(v: Nilable<T>): v is null | undefined => v == null;
