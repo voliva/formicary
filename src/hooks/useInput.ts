@@ -7,22 +7,30 @@ import { Validator } from "../validators";
 export type InputOptions<TValues, P extends Paths<TValues>> = {
   elementProp?: string;
   eventType?: "input" | "onChange";
-  key?: Key<TValues, P>;
   validator?: Validator<ValueOfPath<TValues, P>, TValues>;
   initialValue?: string | boolean;
 };
 
 export function useInput<TValues, P extends Paths<TValues>>(
-  options?: InputOptions<TValues, P>
+  options?: InputOptions<TValues, P> & {
+    key?: Key<TValues, P>;
+  }
+): MutableRefObject<HTMLInputElement | null>;
+export function useInput(
+  options?: InputOptions<any, string> & {
+    key?: string;
+  }
 ): MutableRefObject<HTMLInputElement | null>;
 export function useInput<TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
-  options?: InputOptions<TValues, P>
+  options?: InputOptions<TValues, P> & {
+    key?: P;
+  }
 ): MutableRefObject<HTMLInputElement | null>;
 export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
   const [formRef, options = {}] = useHookParams<
     TValues,
-    [InputOptions<TValues, P> | undefined]
+    [(InputOptions<TValues, P> & { key?: P }) | undefined]
   >(args);
   const { eventType = "input", elementProp = "value" } = options;
   const ref = useRef<HTMLInputElement | null>(null);
@@ -77,3 +85,29 @@ export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
 
   return ref;
 }
+
+/*
+  interface FormValue {
+    subcontrol: {
+      foo: string;
+      bar: unknown;
+    };
+  }
+  const form = useForm<FormValue>();
+  const key = createKeyFn<FormValue>();
+
+  const ref = useInput(form, {
+    key: "subcontrol",
+    initialValue: true,
+  });
+  
+  const ref2 = useInput({
+    key: key("subcontrol"),
+    initialValue: true,
+  });
+  
+  const ref3 = useInput({
+    key: "subcontrol",
+    initialValue: true,
+  });
+*/

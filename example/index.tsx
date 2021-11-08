@@ -22,7 +22,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 
 interface FormValue {
-  min: number;
+  min: string;
   max: string;
   subcontrol: {
     foo: string;
@@ -41,8 +41,40 @@ const Form = () => {
     initialValue: {
       min: "1",
       max: "5",
-      subcontrol: "subcontrol value",
+      subcontrol: {
+        foo: "",
+        bar: 3,
+      },
+      array: [],
     },
+  });
+
+  const control = useControl(form, {
+    key: "subcontrol",
+    initialValue: {
+      foo: "asdf",
+      bar: "haha",
+    },
+  });
+
+  const control2 = useControl({
+    key: key("subcontrol"),
+    initialValue: null,
+  });
+
+  const ref = useInput(form, {
+    key: "subcontrol",
+    initialValue: true,
+  });
+
+  const ref2 = useInput({
+    key: key("subcontrol"),
+    initialValue: true,
+  });
+
+  const ref3 = useInput({
+    key: "subcontrol",
+    initialValue: true,
   });
 
   const errors = useErrors(form);
