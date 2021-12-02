@@ -17,6 +17,7 @@ import {
   useControl,
   FormicaryContext,
   createKeyFn,
+  FormRef,
 } from ".././src";
 import { useState } from "react";
 import { useEffect } from "react";
@@ -142,3 +143,62 @@ const App = () => {
 };
 
 ReactDOM.render(<App />, document.getElementById("root"));
+
+enum E1 {
+  e10 = "e10", // Doesn't work if number only...
+  e20 = "e20",
+}
+
+type T1 = Record<E1, boolean>;
+interface T2 {
+  t20: string;
+  t21: boolean;
+  t23: Array<number>;
+}
+type T3 = T1 & Omit<T2, "t23">;
+
+type _ = typeof E1.e10 extends keyof T3 ? true : false;
+
+const form = useForm({
+  initialValue: {} as T3,
+});
+
+function whatever(v: E1) {
+  const result = useControl(form, {
+    key: v,
+    initialValue: true,
+  });
+}
+
+/****/
+
+function foo<T>(form: FormRef<T>, key: keyof T) {
+  const input = useInput(form, {
+    key, // Error
+  });
+}
+
+/****/
+
+const formA = useForm<{ name: string; age: number }>();
+const formB: FormRef<{ name: string }> = formA; // Error
+
+/*****/
+
+const formC = useForm<any>();
+useErrors(formC, "name"); // Error
+
+/*****/
+
+const formD = useForm<{ foo: boolean; bar: number }>();
+
+const inputRef = useInput(formD, {
+  validator: (value: number) => true, // Error?? happening on alpha
+});
+
+/****/
+
+const { setValue, value, touch } = useControl(formD, {
+  initialValue: undefined, // Error: Used to work, not anymore. What's the policy on undefined values?
+  key: "bar",
+});
