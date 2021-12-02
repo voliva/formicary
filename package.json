@@ -1,11 +1,10 @@
 {
-  "version": "0.2.5",
+  "version": "0.3.0-local.1",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/types/index.d.ts",
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "engines": {
     "node": ">=10"

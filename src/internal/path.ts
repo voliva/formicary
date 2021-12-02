@@ -13,11 +13,17 @@ type KeyMap<T> = {
 };
 export type Paths<T> = KeyMap<T>[keyof T & string];
 
+type NotNil<T> = Exclude<T, undefined | null>;
 export type ValueOfPath<TValues, Path> = Path extends keyof TValues
-  ? TValues[Path]
-  : Path extends `${infer Prop}.${infer Rest}`
-  ? Prop extends keyof TValues
-    ? ValueOfPath<TValues[Prop], Rest>
+  ? TValues[Path] // Leaf node, it's just whatever the type of the prop is
+  : Path extends `${infer Prop}.${infer Rest}` // If it can be split with a dot
+  ? Prop extends keyof TValues // If the first part is a key of the object
+    ?
+        | ValueOfPath<NotNil<TValues[Prop]>, Rest>
+        // The following line represents optional chaining.
+        // We removed the null | undefined with NotNil<T> to be able to chain through
+        // So now we must add undefined if T was nil (following the rule of optional chaining)
+        | (TValues[Prop] extends undefined | null ? undefined : never)
     : unknown
   : unknown;
 

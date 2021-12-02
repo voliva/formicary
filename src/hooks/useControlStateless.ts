@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { FormRef, getControlState, ControlOptions } from "../internal/formRef";
-import { getMapValue } from "../internal/path";
+import { getMapValue, Paths } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
 export interface ControlStateless<T> {
@@ -39,7 +39,7 @@ export function useControlStateless<TValues, T>(
     subscribe: (cb: (value: T) => void) =>
       getMapValue(key, formRef.values).subscribe(cb),
     touch: () => {
-      const state$ = getControlState(formRef, key);
+      const state$ = getControlState(formRef, key as Paths<TValues>);
       state$.value.then(
         (value) => {
           if (value.touched || state$.closed) return;

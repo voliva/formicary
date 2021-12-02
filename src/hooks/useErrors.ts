@@ -22,7 +22,7 @@ export const useErrors = <TValues>(
     const keys$ =
       keys[0] === ALL_KEYS
         ? formRef.registeredKeys.pipe(map((set) => Array.from(set)))
-        : just(keys);
+        : just(keys as Array<Paths<TValues>>);
 
     return keys$
       .pipe(
