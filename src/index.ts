@@ -14,6 +14,7 @@ export * from "./validators";
 export * from "./context";
 
 export { FormRef } from "./internal/formRef";
+export { FormRef as FakeFormRef } from "./fakeFormRef";
 export { subfield } from "./internal/subfield";
 export { Paths, ValueOfPath, createKeyFn } from "./internal/path";
 

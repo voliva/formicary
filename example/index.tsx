@@ -18,9 +18,12 @@ import {
   FormicaryContext,
   createKeyFn,
   FormRef,
+  Paths,
 } from ".././src";
 import { useState } from "react";
 import { useEffect } from "react";
+import { State } from "derive-state";
+import { ControlOptions, ControlState } from "../src/internal/formRef";
 
 interface FormValue {
   min: string;
@@ -182,6 +185,20 @@ function foo<T>(form: FormRef<T>, key: keyof T) {
 
 const formA = useForm<{ name: string; age: number }>();
 const formB: FormRef<{ name: string }> = formA; // Error
+
+const internal = Symbol();
+interface FormRef2<TValues extends Record<string, any>> {
+  // registeredKeys: State<Set<Paths<TValues>>>;
+  // registerControl: (options: ControlOptions<TValues, any>) => void;
+  // initialValues: Map<string, State<any>>;
+  // values: Map<string, State<any>>;
+  // controlStates: Map<string, State<ControlState<any>>>;
+  // dispose: () => void;
+  [internal]: TValues;
+}
+
+const form2A: FormRef2<{ name: string; age: number }> = null as any;
+const form2B: FormRef2<{ name: string }> = form2A; // Error
 
 /*****/
 
