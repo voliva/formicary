@@ -63,7 +63,7 @@ const Form = () => {
 
   const control2 = useControl({
     key: key("subcontrol"),
-    initialValue: null,
+    initialValue: undefined,
   });
 
   const ref = useInput(form, {

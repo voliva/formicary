@@ -14,6 +14,15 @@ export function useControl<TValues, P extends Paths<TValues>>(options: {
   initialValue: ValueOfPath<TValues, P>;
   validator?: Validator<ValueOfPath<TValues, P>, TValues>;
 }): Control<ValueOfPath<TValues, P>>;
+export function useControl<
+  TValues,
+  P extends Paths<TValues>,
+  V extends null | undefined
+>(options: {
+  key: Key<TValues, P>;
+  initialValue: V;
+  validator?: Validator<ValueOfPath<TValues, P> | V, TValues>;
+}): Control<ValueOfPath<TValues, P> | V>;
 export function useControl<T>(options: {
   key: string;
   initialValue: T;
@@ -27,6 +36,18 @@ export function useControl<TValues, P extends Paths<TValues>>(
     validator?: Validator<ValueOfPath<TValues, P>, TValues>;
   }
 ): Control<ValueOfPath<TValues, P>>;
+export function useControl<
+  TValues,
+  P extends Paths<TValues>,
+  V extends undefined | null
+>(
+  formRef: FormRef<TValues>,
+  options: {
+    key: P;
+    initialValue: V;
+    validator?: Validator<ValueOfPath<TValues, P> | V, TValues>;
+  }
+): Control<ValueOfPath<TValues, P> | V>;
 export function useControl<TValues, P extends Paths<TValues>>(
   ...args: any[]
 ): Control<ValueOfPath<TValues, P>> {
