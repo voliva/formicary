@@ -175,7 +175,7 @@ function whatever(v: E1) {
 
 /****/
 
-function foo<T>(form: FormRef<T>, key: keyof T) {
+function foo<T>(form: FormRef<T>, key: keyof T & string) {
   const input = useInput(form, {
     key, // Error
   });
@@ -186,24 +186,10 @@ function foo<T>(form: FormRef<T>, key: keyof T) {
 const formA = useForm<{ name: string; age: number }>();
 const formB: FormRef<{ name: string }> = formA; // Error
 
-const internal = Symbol();
-interface FormRef2<TValues extends Record<string, any>> {
-  // registeredKeys: State<Set<Paths<TValues>>>;
-  // registerControl: (options: ControlOptions<TValues, any>) => void;
-  // initialValues: Map<string, State<any>>;
-  // values: Map<string, State<any>>;
-  // controlStates: Map<string, State<ControlState<any>>>;
-  // dispose: () => void;
-  [internal]: TValues;
-}
-
-const form2A: FormRef2<{ name: string; age: number }> = null as any;
-const form2B: FormRef2<{ name: string }> = form2A; // Error
-
 /*****/
 
 const formC = useForm<any>();
-useErrors(formC, "name"); // Error
+useErrors(formC, ["name"]); // Error
 
 /*****/
 
@@ -216,6 +202,6 @@ const inputRef = useInput(formD, {
 /****/
 
 const { setValue, value, touch } = useControl(formD, {
-  initialValue: undefined, // Error: Used to work, not anymore. What's the policy on undefined values?
+  initialValue: undefined, // Error: Used   work, not anymore. What's the policy on undefined values?
   key: "bar",
 });

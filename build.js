@@ -53,27 +53,34 @@ function buildTypes() {
 }
 
 async function fakeFormRef() {
-  const filename = path.join("dist", "types", "index.d.ts");
+  const filename = path.join("dist", "types", "internal", "formRef.d.ts");
   const contents = await fsP.readFile(filename, 'utf-8');
 
   const originalLines = contents
     .split('\n');
 
-  let replaced = false;
-  const newLines = originalLines.filter(line => !line.includes('./internal/formRef'))
-    .map(line => {
-      if (line.includes('./fakeFormRef')) {
-        replaced = true;
-        return "export { FormRef } from './fakeFormRef';";
-      }
+  let removed_real = false;
+  let replaced_fake = false;
+  const newLines = originalLines.map(line => {
+    if (!line.startsWith("export {")) {
       return line;
-    })
+    }
+    if (line.includes('FormRef, ')) {
+      removed_real = true;
+      return line.replace('FormRef, ', '');
+    }
+    if (line.includes('FormRef as FakeFormRef')) {
+      replaced_fake = true;
+      return line.replace('FormRef as FakeFormRef', 'FormRef');
+    }
+    return line;
+  })
 
-  if (newLines.length === originalLines.length) {
-    throw new Error("fakeFormRef: Couldn't find target line to remove in index.d.ts");
+  if (!removed_real) {
+    throw new Error("fakeFormRef: Couldn't find target export to remove in index.d.ts");
   }
-  if (!replaced) {
-    throw new Error("fakeFormRef: Couldn't find target line to replace in index.d.ts");
+  if (!replaced_fake) {
+    throw new Error("fakeFormRef: Couldn't find target export to replace in index.d.ts");
   }
 
   const newContents = newLines
