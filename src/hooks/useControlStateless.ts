@@ -1,33 +1,77 @@
 import { useEffect } from "react";
-import { FormRef, getControlState, ControlOptions } from "../internal/formRef";
-import { getMapValue, Paths } from "../internal/path";
+import { FormRef, getControlState } from "../internal/formRef";
+import {
+  getKey,
+  getMapValue,
+  Key,
+  KeySelector,
+  Paths,
+  ValueOfPath,
+} from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
+import { Validator } from "../validators";
+
+export interface ControlStatelessOptions<K, TValues, T> {
+  key: K;
+  initialValue?: T;
+  validator?: Validator<T, TValues>;
+}
 
 export interface ControlStateless<T> {
-  getValue: () => T;
-  setValue: (value: T) => void;
-  subscribe: (cb: (value: T) => void) => void;
+  getValue: () => T | undefined;
+  setValue: (value: T | undefined) => void;
+  subscribe: (cb: (value: T | undefined) => void) => () => void;
   touch: () => void;
 }
 
-export function useControlStateless<TValues, T>(
-  options: ControlOptions<TValues, T>
-): ControlStateless<T>;
-export function useControlStateless<TValues, T>(
+/// With formRef ///
+// string path
+export function useControlStateless<
+  TValues,
+  P extends Paths<TValues>,
+  V extends ValueOfPath<TValues, P>
+>(
   formRef: FormRef<TValues>,
-  options: ControlOptions<TValues, T>
+  options: ControlStatelessOptions<P, TValues, V>
+): ControlStateless<V>;
+
+// key selector
+export function useControlStateless<TValues, V>(
+  formRef: FormRef<TValues>,
+  options: ControlStatelessOptions<KeySelector<TValues, V>, TValues, V>
+): ControlStateless<V>;
+
+/// Without formRef ///
+// untyped string
+export function useControlStateless<TValues, T>(
+  options: ControlStatelessOptions<string, TValues, T>
 ): ControlStateless<T>;
+
+// string path through keyFn
+export function useControlStateless<TValues, T>(
+  options: ControlStatelessOptions<Key<any, any, T>, TValues, T>
+): ControlStateless<T>;
+
+// key selector
+export function useControlStateless<TValues, T>(
+  options: ControlStatelessOptions<KeySelector<TValues, T>, TValues, T>
+): ControlStateless<T>;
+
 export function useControlStateless<TValues, T>(
   ...args: any[]
 ): ControlStateless<T> {
   const [formRef, options] = useHookParams<
     TValues,
-    [ControlOptions<TValues, T>]
+    [ControlStatelessOptions<any, TValues, T>]
   >(args);
-  const { key } = options;
+  const key = getKey(options.key);
 
   useEffect(() => {
-    formRef.registerControl(options);
+    formRef.registerControl({
+      key,
+      initialValue: options.initialValue ?? undefined,
+      validator: options.validator,
+    });
   }, [formRef, options]);
 
   return {
@@ -35,8 +79,9 @@ export function useControlStateless<TValues, T>(
       const state = getMapValue(key, formRef.values);
       return state.hasValue() ? state.getValue() : options.initialValue;
     },
-    setValue: (value: T) => getMapValue(key, formRef.values).setValue(value),
-    subscribe: (cb: (value: T) => void) =>
+    setValue: (value: T | undefined) =>
+      getMapValue(key, formRef.values).setValue(value),
+    subscribe: (cb: (value: T | undefined) => void) =>
       getMapValue(key, formRef.values).subscribe(cb),
     touch: () => {
       const state$ = getControlState(formRef, key as Paths<TValues>);

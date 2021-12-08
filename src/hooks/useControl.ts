@@ -1,62 +1,64 @@
 import { useEffect, useState } from "react";
-import { ControlOptions, FormRef } from "../internal/formRef";
-import { Key, Paths, ValueOfPath } from "../internal/path";
+import { FormRef } from "../internal/formRef";
+import { Key, KeySelector, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 import { Validator } from "../validators";
 import { ControlStateless, useControlStateless } from "./useControlStateless";
 
+export interface ControlHookOptions<K, TValues, T> {
+  key: K;
+  initialValue?: T;
+  validator?: Validator<T, TValues>;
+}
+
 export type Control<T> = Omit<ControlStateless<T>, "subscribe"> & {
-  value: T;
+  value: T | undefined;
 };
 
-export function useControl<TValues, P extends Paths<TValues>>(options: {
-  key: Key<TValues, P>;
-  initialValue: ValueOfPath<TValues, P>;
-  validator?: Validator<ValueOfPath<TValues, P>, TValues>;
-}): Control<ValueOfPath<TValues, P>>;
+/// With formRef ///
+// string path
 export function useControl<
   TValues,
   P extends Paths<TValues>,
-  V extends null | undefined
->(options: {
-  key: Key<TValues, P>;
-  initialValue: V;
-  validator?: Validator<ValueOfPath<TValues, P> | V, TValues>;
-}): Control<ValueOfPath<TValues, P> | V>;
-export function useControl<T>(options: {
-  key: string;
-  initialValue: T;
-  validator?: Validator<T, any>;
-}): Control<T>;
-export function useControl<TValues, P extends Paths<TValues>>(
-  formRef: FormRef<TValues>,
-  options: {
-    key: P;
-    initialValue: ValueOfPath<TValues, P>;
-    validator?: Validator<ValueOfPath<TValues, P>, TValues>;
-  }
-): Control<ValueOfPath<TValues, P>>;
-export function useControl<
-  TValues,
-  P extends Paths<TValues>,
-  V extends undefined | null
+  V extends ValueOfPath<TValues, P>
 >(
   formRef: FormRef<TValues>,
-  options: {
-    key: P;
-    initialValue: V;
-    validator?: Validator<ValueOfPath<TValues, P> | V, TValues>;
-  }
-): Control<ValueOfPath<TValues, P> | V>;
+  options: ControlHookOptions<P, TValues, V>
+): Control<V>;
+
+// key selector
+export function useControl<TValues, V>(
+  formRef: FormRef<TValues>,
+  options: ControlHookOptions<KeySelector<TValues, V>, TValues, V>
+): Control<V>;
+
+/// Without formRef ///
+// untyped string
+export function useControl<TValues, T>(
+  options: ControlHookOptions<string, TValues, T>
+): Control<T>;
+
+// string path through keyFn
+export function useControl<TValues, T>(
+  options: ControlHookOptions<Key<any, any, T>, TValues, T>
+): Control<T>;
+
+// key selector
+export function useControl<TValues, T>(
+  options: ControlHookOptions<KeySelector<TValues, T>, TValues, T>
+): Control<T>;
+
 export function useControl<TValues, P extends Paths<TValues>>(
   ...args: any[]
 ): Control<ValueOfPath<TValues, P>> {
   const [formRef, options] = useHookParams<
     TValues,
-    [ControlOptions<TValues, ValueOfPath<TValues, P>>]
+    [ControlHookOptions<any, TValues, ValueOfPath<TValues, P>>]
   >(args);
   const { subscribe, ...control } = useControlStateless(formRef, options);
-  const [state, setState] = useState<ValueOfPath<TValues, P>>(control.getValue);
+  const [state, setState] = useState<ValueOfPath<TValues, P> | undefined>(
+    control.getValue
+  );
 
   useEffect(() => subscribe(setState), []);
 
@@ -65,66 +67,3 @@ export function useControl<TValues, P extends Paths<TValues>>(
     value: state,
   };
 }
-
-/*
-  interface FormValue {
-    subcontrol: {
-      foo: string;
-      bar: unknown;
-    };
-  }
-  const form = useForm<FormValue>();
-
-  // Control<{foo: string; bar: unknown; }>
-  const control = useControl(form, {
-    key: "subcontrol",
-    initialValue: {
-      foo: "asdf",
-      bar: "haha",
-    },
-  });
-
-  // null is not asignable to type {foo: string; bar: unknown; }
-  const control = useControl(form, {
-    key: "subcontrol",
-    initialValue: null,
-  });
-
-  // asdf is not asignable to Paths<FormValue>
-  const control = useControl(form, {
-    key: "asdf",
-    initialValue: {
-      foo: "asdf",
-      bar: "haha",
-    },
-  });
-
-  // Intellisense works with key.
-
-  const key = createKeyFn<FormValue>();
-
-  // Control<{foo: string; bar: unknown; }>
-  const control = useControl({
-    key: key("subcontrol"),
-    initialValue: {
-      foo: "asdf",
-      bar: "haha",
-    },
-  });
-
-  // Control<null>      <======= Unwanted :(
-  const control = useControl({
-    key: key("subcontrol"),
-    initialValue: null,
-  });
-
-  // Control<null>      <======= OK
-  const control = useControl({
-    key: "asdf",
-    initialValue: null
-  });
-
-  // This is for the permissive second overload. Without it
-  // the "Unwanted" result will become type safe (can't assign null to blah)
-  // but then the next one (marked with OK) gets a nasty `can't assign to never` error.
-*/

@@ -1,29 +1,25 @@
-import "react-app-polyfill/ie11";
 import * as React from "react";
+import { useEffect, useState } from "react";
+import "react-app-polyfill/ie11";
 import * as ReactDOM from "react-dom";
 import {
+  createKeyFn,
+  FormicaryContext,
+  FormRef,
   isAtMost,
   isNumber,
   isRequired,
   pipeValidators,
   readForm,
-  useInput,
-  useForm,
-  useFieldValue,
-  useErrors,
-  useIsPristine,
-  useIsValid,
   setFieldError,
   useControl,
-  FormicaryContext,
-  createKeyFn,
-  FormRef,
-  Paths,
+  useErrors,
+  useFieldValue,
+  useForm,
+  useInput,
+  useIsPristine,
+  useIsValid,
 } from ".././src";
-import { useState } from "react";
-import { useEffect } from "react";
-import { State } from "derive-state";
-import { ControlOptions, ControlState } from "../src/internal/formRef";
 
 interface FormValue {
   min: string;
@@ -66,27 +62,24 @@ const Form = () => {
     initialValue: undefined,
   });
 
-  const ref = useInput(form, {
-    key: "subcontrol",
+  const ref = useInput(form, "subcontrol", {
     initialValue: true,
   });
 
-  const ref2 = useInput({
-    key: key("subcontrol"),
+  const ref2 = useInput(key("subcontrol"), {
     initialValue: true,
   });
 
-  const ref3 = useInput({
-    key: "subcontrol",
+  const ref3 = useInput("subcontrol", {
     initialValue: true,
   });
 
   const errors = useErrors(form);
-  const minField = useInput(form, {
+  const minField = useInput(form, "min", {
     initialValue: "0",
     validator: pipeValidators(isRequired(), isNumber(), isAtMost("max")),
   });
-  const maxField = useInput(form, {
+  const maxField = useInput(form, "max", {
     initialValue: "0",
     validator: pipeValidators(isRequired(), isNumber()),
   });
@@ -104,8 +97,8 @@ const Form = () => {
   return (
     <FormicaryContext.Provider value={form}>
       <div>
-        <input name="min" placeholder="min" ref={minField} />
-        {showMax && <input name="max" placeholder="max" ref={maxField} />}
+        <input placeholder="min" ref={minField} />
+        {showMax && <input placeholder="max" ref={maxField} />}
         <div>minErrors: {errors.min}</div>
         <div>maxErrors: {errors.max}</div>
         <div>Minimum: {min}</div>
@@ -176,9 +169,7 @@ function whatever(v: E1) {
 /****/
 
 function foo<T>(form: FormRef<T>, key: keyof T & string) {
-  const input = useInput(form, {
-    key, // Error
-  });
+  const input = useInput(form, key);
 }
 
 /****/
@@ -195,7 +186,7 @@ useErrors(formC, ["name"]); // Error
 
 const formD = useForm<{ foo: boolean; bar: number }>();
 
-const inputRef = useInput(formD, {
+const inputRef = useInput(formD, "bar", {
   validator: (value: number) => true, // Error?? happening on alpha
 });
 

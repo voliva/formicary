@@ -132,10 +132,12 @@ export type KeysSelector<TValues, R extends ReadonlyArray<any>> = (
 // const r6 = useValuesImplicit(kf('bar'), kf('baz.bob'));
 // const r7 = useValuesImplicit((v: Foo) => [v.bar, v.baz!.bob] as const);
 
-export const getKey = (keySelector: KeySelector<any, any>): string => {
+export const getKey = (
+  keySelector: KeySelector<any, any> | Key<any, any, any> | string
+): string => {
   if (typeof keySelector === "string") return keySelector;
   const proxy = new Proxy({ path: "" }, getProxyHandler());
-  const result = keySelector(proxy);
+  const result = (keySelector as KeySelector<any, any>)(proxy);
   if (!(PATH_RESULT in result)) {
     throw new Error(
       `You must return a value from the argument in the selector function`
@@ -143,8 +145,10 @@ export const getKey = (keySelector: KeySelector<any, any>): string => {
   }
   return result[PATH_RESULT];
 };
-export const getKeys = (keysSelector: KeysSelector<any, any[]>): string[] => {
-  if (typeof keysSelector === "object") return keysSelector;
+export const getKeys = (
+  keysSelector: KeysSelector<any, any[]> | Key<any, any, any>[] | string[]
+): string[] => {
+  if (typeof keysSelector === "object") return keysSelector as string[];
   const proxy = new Proxy({ path: "" }, getProxyHandler());
   const result = keysSelector(proxy);
   if (result.some((r) => !(PATH_RESULT in r))) {

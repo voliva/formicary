@@ -1,79 +1,87 @@
 import { MutableRefObject, useEffect, useRef } from "react";
-import { FormRef, getControlState } from "../internal/formRef";
-import { getMapValue, Key, Paths, ValueOfPath } from "../internal/path";
+import { useControlStateless } from ".";
+import { FormRef } from "../internal/formRef";
+import { Key, KeySelector, Paths, ValueOfPath } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 import { Validator } from "../validators";
 
-export type InputOptions<TValues, P extends Paths<TValues>> = {
+export type InputOptions<TValues, V> = {
   elementProp?: string;
   eventType?: "input" | "onChange";
-  validator?: Validator<ValueOfPath<TValues, P>, TValues>;
+  validator?: Validator<V, TValues>;
   initialValue?: string | boolean;
 };
 
-export function useInput<TValues, P extends Paths<TValues>>(
-  options?: InputOptions<TValues, P> & {
-    key?: Key<TValues, P>;
-  }
-): MutableRefObject<HTMLInputElement | null>;
-export function useInput(
-  options?: InputOptions<any, string> & {
-    key?: string;
-  }
-): MutableRefObject<HTMLInputElement | null>;
-export function useInput<TValues, P extends Paths<TValues>>(
+/// With formRef ///
+// string path
+export function useInput<
+  TValues,
+  P extends Paths<TValues>,
+  V extends ValueOfPath<TValues, P>
+>(
   formRef: FormRef<TValues>,
-  options?: InputOptions<TValues, P> & {
-    key?: P;
-  }
+  key: P,
+  options?: InputOptions<TValues, V>
 ): MutableRefObject<HTMLInputElement | null>;
+
+// key selector
+export function useInput<TValues, V>(
+  formRef: FormRef<TValues>,
+  key: KeySelector<TValues, V>,
+  options?: InputOptions<TValues, V>
+): MutableRefObject<HTMLInputElement | null>;
+
+/// Without formRef ///
+// untyped string
+export function useInput<TValues, T>(
+  key: string,
+  options?: InputOptions<TValues, T>
+): MutableRefObject<HTMLInputElement | null>;
+
+// string path through keyFn
+export function useInput<TValues, T>(
+  key: Key<TValues, any, T>,
+  options?: InputOptions<TValues, T>
+): MutableRefObject<HTMLInputElement | null>;
+
+// key selector
+export function useInput<TValues, T>(
+  key: KeySelector<TValues, T>,
+  options?: InputOptions<TValues, T>
+): MutableRefObject<HTMLInputElement | null>;
+
 export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
-  const [formRef, options = {}] = useHookParams<
+  const [formRef, keySelector, options = {}] = useHookParams<
     TValues,
-    [(InputOptions<TValues, P> & { key?: P }) | undefined]
+    [any, InputOptions<TValues, P> | undefined]
   >(args);
   const { eventType = "input", elementProp = "value" } = options;
   const ref = useRef<HTMLInputElement | null>(null);
+
+  const control = useControlStateless(formRef, {
+    key: keySelector,
+    initialValue: (options.initialValue as any) ?? "",
+    validator: options.validator,
+  });
 
   useEffect(() => {
     const element = ref.current;
     if (!element) {
       return;
     }
-    const { initialValue = "", validator } = options;
-    const key = options.key ?? (element.name as Paths<TValues>);
-    if (!key) {
-      console.error(
-        "An input is missing its key. Either supply it through useInput `key` option or through the input's name",
-        element,
-        { options }
-      );
-      return;
-    }
-    formRef.registerControl({
-      initialValue,
-      key,
-      validator,
-    });
 
-    const value$ = getMapValue(key, formRef.values);
-    const valueUnsub = value$.subscribe((value) => {
+    const valueUnsub = control.subscribe((value) => {
       if ((element as any)[elementProp] !== value) {
         (element as any)[elementProp] = value;
       }
     });
 
     const blurListener = () => {
-      const control$ = getControlState(formRef, key);
-      if (control$.getValue().touched) return;
-      control$.setValue({
-        ...control$.getValue(),
-        touched: true,
-      });
+      control.touch();
     };
     element.addEventListener("blur", blurListener);
     const valueListener = (event: any) =>
-      value$.setValue(event.target[elementProp]);
+      control.setValue(event.target[elementProp]);
     element.addEventListener(eventType, valueListener);
 
     return () => {
@@ -81,33 +89,7 @@ export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
       element.removeEventListener("blur", blurListener);
       element.removeEventListener(eventType, valueListener);
     };
-  });
+  }, [ref.current]);
 
   return ref;
 }
-
-/*
-  interface FormValue {
-    subcontrol: {
-      foo: string;
-      bar: unknown;
-    };
-  }
-  const form = useForm<FormValue>();
-  const key = createKeyFn<FormValue>();
-
-  const ref = useInput(form, {
-    key: "subcontrol",
-    initialValue: true,
-  });
-  
-  const ref2 = useInput({
-    key: key("subcontrol"),
-    initialValue: true,
-  });
-  
-  const ref3 = useInput({
-    key: "subcontrol",
-    initialValue: true,
-  });
-*/
