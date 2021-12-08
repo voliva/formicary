@@ -11,6 +11,7 @@ function buildSource(options) {
     entryPoints: ['./src/index.ts'],
     bundle: true,
     external: ['react', 'derive-state'],
+    target: 'es2019',
     ...options
   })
 }
