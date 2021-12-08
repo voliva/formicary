@@ -1,6 +1,6 @@
 export { getFieldChanges } from "./commands/getFieldChanges";
-export { readField } from "./commands/readField";
-export { readForm } from "./commands/readForm";
+export { getFieldValue } from "./commands/getFieldValue";
+export { getFormValue } from "./commands/getFormValue";
 export { resetForm } from "./commands/resetForm";
 export { setFieldValue, setFormValue } from "./commands/setFieldValue";
 export {

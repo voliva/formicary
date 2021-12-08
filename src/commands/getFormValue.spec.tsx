@@ -5,7 +5,7 @@ import React from "react";
 import { useForm } from "../hooks/useForm";
 import { useInput } from "../hooks/useInput";
 import { subfield } from "../internal/subfield";
-import { readForm } from "./readForm";
+import { getFormValue } from "./getFormValue";
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
   const form = useForm({
@@ -16,11 +16,19 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(readForm(form));
+        onSubmit(getFormValue(form));
       }}
     >
-      <input type="text" name="value" ref={useInput(form, { validator })} />
-      <input type="text" name="nested.value" ref={useInput(form)} />
+      <input
+        type="text"
+        name="value"
+        ref={useInput(form, "value", { validator })}
+      />
+      <input
+        type="text"
+        name="nested.value"
+        ref={useInput(form, "nested.value")}
+      />
       <input type="submit" value="Submit" />
     </form>
   );
@@ -29,7 +37,7 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
 describe("readForm", () => {
   it("returns an empty object if no value has been set yet", () => {
     const hookResult = renderHook(() => useForm());
-    const result = readForm(hookResult.result.current);
+    const result = getFormValue(hookResult.result.current);
     expect(result).toEqual({});
     hookResult.unmount();
   });

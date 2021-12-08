@@ -146,8 +146,19 @@ export const getKey = (
   return result[PATH_RESULT];
 };
 export const getKeys = (
-  keysSelector: KeysSelector<any, any[]> | Key<any, any, any>[] | string[]
+  keysSelector:
+    | KeysSelector<any, any[]>
+    | [KeysSelector<any, any[]>]
+    | Key<any, any, any>[]
+    | string[]
 ): string[] => {
+  if (
+    Array.isArray(keysSelector) &&
+    keysSelector.length === 1 &&
+    typeof keysSelector[0] === "function"
+  ) {
+    keysSelector = keysSelector[0];
+  }
   if (typeof keysSelector === "object") return keysSelector as string[];
   const proxy = new Proxy({ path: "" }, getProxyHandler());
   const result = keysSelector(proxy);

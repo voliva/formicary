@@ -13,7 +13,7 @@ import {
   StatelessObservable,
 } from "derive-state";
 import { Validator, noopValidator } from "../validators";
-import { getKeyValues, getMapValue, Key, Paths, ValueOfPath } from "./path";
+import { getKeyValues, getMapValue, Paths, ValueOfPath } from "./path";
 import type {
   ControlOptions,
   FormRef,

@@ -1,9 +1,9 @@
 import { State, Stateless, StateObservable } from "derive-state";
 import { Validator } from "../validators";
-import { Key, Paths } from "./path";
+import { Paths } from "./path";
 
 export interface ControlOptions<TValues, T> {
-  key: Key<TValues, Paths<TValues>>;
+  key: string;
   initialValue: T;
   validator?: Validator<T, TValues>;
 }

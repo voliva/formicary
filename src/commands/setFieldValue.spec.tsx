@@ -4,7 +4,7 @@ import React from "react";
 import { useForm } from "../hooks/useForm";
 import { useInput } from "../hooks/useInput";
 import { useIsValid } from "../hooks/useIsValid";
-import { readForm } from "./readForm";
+import { getFormValue } from "./getFormValue";
 import { setFieldValue, setFormValue } from "./setFieldValue";
 
 const Form = ({ onSubmit, initialValue, validator }: any) => {
@@ -17,11 +17,19 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(readForm(form));
+        onSubmit(getFormValue(form));
       }}
     >
-      <input type="text" name="value" ref={useInput(form, { validator })} />
-      <input type="text" name="nested.value" ref={useInput(form)} />
+      <input
+        type="text"
+        name="value"
+        ref={useInput(form, "value", { validator })}
+      />
+      <input
+        type="text"
+        name="nested.value"
+        ref={useInput(form, "nested.value")}
+      />
       <div data-testid="isValid">{String(isValid)}</div>
       <input type="submit" value="Submit" />
       <button

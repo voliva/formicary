@@ -8,21 +8,57 @@ import {
 } from "derive-state";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
-import { Key, Paths } from "../internal/path";
+import { getKeys, Key, KeysSelector, Paths } from "../internal/path";
+import { useHookParams } from "../internal/useHookParams";
 
-const ALL_KEYS = {};
-export const useErrors = <TValues>(
+type Errors<T extends string> = {
+  [K in T]: string[] | "pending";
+};
+
+/// With formRef ///
+// no keys
+export function useErrors<TValues>(formRef: FormRef<TValues>): Errors<string>;
+
+// string path
+export function useErrors<TValues, P extends Paths<TValues>[]>(
   formRef: FormRef<TValues>,
-  keys: Key<TValues, Paths<TValues>>[] = [ALL_KEYS] as Key<
+  ...paths: P
+): Errors<P[number]>;
+
+// key selector
+export function useErrors<TValues>(
+  formRef: FormRef<TValues>,
+  keysSelector: KeysSelector<TValues, any>
+): Errors<string>;
+
+/// Without formRef ///
+// no keys
+export function useErrors(): Errors<string>;
+
+// untyped string
+export function useErrors<P extends string[]>(...paths: P): Errors<P[number]>;
+
+// string path through keyFn
+export function useErrors<K extends Key<any, any, any>[]>(
+  ...keys: K
+): Errors<K[number] extends Key<any, infer P, any> ? P : string>;
+
+// key selector
+export function useErrors<TValues>(
+  keysSelector: KeysSelector<TValues, any>
+): Errors<string>;
+
+export function useErrors<TValues>(...args: any[]): Errors<string> {
+  const [formRef, ...keys] = useHookParams<
     TValues,
-    Paths<TValues>
-  >[]
-) => {
+    [KeysSelector<TValues, any>] | string[] | []
+  >(args);
+
   const error$ = useMemo(() => {
     const keys$ =
-      keys[0] === ALL_KEYS
+      keys.length === 0
         ? formRef.registeredKeys.pipe(map((set) => Array.from(set)))
-        : just(keys as Array<Paths<TValues>>);
+        : just(getKeys(keys) as Paths<TValues>[]);
 
     return keys$
       .pipe(
@@ -68,6 +104,6 @@ export const useErrors = <TValues>(
   }, [error$]);
 
   return errors;
-};
+}
 
 const FALSE = just<false>(false);

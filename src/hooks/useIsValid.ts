@@ -1,30 +1,63 @@
 import { combine, just, map, switchMap, take, withDefault } from "derive-state";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorResult, FormRef, getControlState } from "../internal/formRef";
-import { Key, Paths } from "../internal/path";
+import { getKeys, Key, KeysSelector, Paths } from "../internal/path";
 import { useHookParams } from "../internal/useHookParams";
 
-const ALL_KEYS = {};
-export function useIsValid<TValues>(
-  defaultValue?: boolean,
-  keys?: Key<TValues, Paths<TValues>>[]
-): boolean | "pending";
+/// With formRef ///
+// no keys
 export function useIsValid<TValues>(
   formRef: FormRef<TValues>,
-  defaultValue?: boolean,
-  keys?: Paths<TValues>[]
+  defaultValue?: boolean
 ): boolean | "pending";
+
+// string path
+export function useIsValid<TValues, P extends Paths<TValues>[]>(
+  formRef: FormRef<TValues>,
+  defaultValue: boolean | undefined,
+  ...paths: P
+): boolean | "pending";
+
+// key selector
+export function useIsValid<TValues>(
+  formRef: FormRef<TValues>,
+  defaultValue: boolean | undefined,
+  keysSelector: KeysSelector<TValues, any>
+): boolean | "pending";
+
+/// Without formRef ///
+// no keys
+export function useIsValid(defaultValue?: boolean): boolean | "pending";
+
+// untyped string
+export function useIsValid<P extends string[]>(
+  defaultValue: boolean | undefined,
+  ...paths: P
+): boolean | "pending";
+
+// string path through keyFn
+export function useIsValid<K extends Key<any, any, any>[]>(
+  defaultValue: boolean | undefined,
+  ...keys: K
+): boolean | "pending";
+
+// key selector
+export function useIsValid<TValues>(
+  defaultValue: boolean | undefined,
+  keysSelector: KeysSelector<TValues, any>
+): boolean | "pending";
+
 export function useIsValid<TValues>(...args: any[]): boolean | "pending" {
-  const [formRef, defaultValue = false, keys = [ALL_KEYS] as Paths<TValues>[]] =
-    useHookParams<TValues, [boolean | undefined, Paths<TValues>[] | undefined]>(
-      args
-    );
+  const [formRef, defaultValue = false, ...keys] = useHookParams<
+    TValues,
+    [boolean | undefined, ...([KeysSelector<TValues, any>] | string[] | [])]
+  >(args);
 
   const error$ = useMemo(() => {
     const keys$ =
-      keys[0] === ALL_KEYS
+      keys.length === 0
         ? formRef.registeredKeys.pipe(map((set) => Array.from(set)))
-        : just(keys);
+        : just(getKeys(keys) as Paths<TValues>[]);
 
     return keys$.pipe(
       switchMap((keys) =>

@@ -10,7 +10,7 @@ import {
   isNumber,
   isRequired,
   pipeValidators,
-  readForm,
+  getFormValue,
   setFieldError,
   useControl,
   useErrors,
@@ -107,7 +107,7 @@ const Form = () => {
         {pristine ? null : <SubComponent />}
         <button
           onClick={() => {
-            const value = readForm(form);
+            const value = getFormValue(form);
             console.log(value);
             setFieldError(form, "max", [
               `value ${value.max} is invalid (trololo)`,
@@ -180,7 +180,7 @@ const formB: FormRef<{ name: string }> = formA; // Error
 /*****/
 
 const formC = useForm<any>();
-useErrors(formC, ["name"]); // Error
+useErrors(formC, "name"); // Error
 
 /*****/
 
