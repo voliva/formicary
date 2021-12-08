@@ -9,7 +9,7 @@ import {
 export const setFieldValue = <TValues, P extends Paths<TValues>>(
   formRef: FormRef<TValues>,
   key: P,
-  value: ValueOfPath<TValues, P>
+  value: ValueOfPath<TValues, P> | undefined | null
 ) => {
   getMapValue(key, formRef.values).setValue(value);
 };

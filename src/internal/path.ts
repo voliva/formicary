@@ -1,6 +1,7 @@
 import { State } from "derive-state";
 import { isSubfield } from "./subfield";
 
+//// STRING PATHS ////
 type MappedKey<K extends string, V> =
   | K
   | `${K}${V extends Array<infer A>
@@ -18,23 +19,143 @@ export type ValueOfPath<TValues, Path> = Path extends keyof TValues
   ? TValues[Path] // Leaf node, it's just whatever the type of the prop is
   : Path extends `${infer Prop}.${infer Rest}` // If it can be split with a dot
   ? Prop extends keyof TValues // If the first part is a key of the object
-    ?
-        | ValueOfPath<NotNil<TValues[Prop]>, Rest>
-        // The following line represents optional chaining.
-        // We removed the null | undefined with NotNil<T> to be able to chain through
-        // So now we must add undefined if T was nil (following the rule of optional chaining)
-        | (TValues[Prop] extends undefined | null ? undefined : never)
+    ? ValueOfPath<NotNil<TValues[Prop]>, Rest>
     : unknown
   : unknown;
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type Key<T, P extends Paths<T>> = P & {}; // This is actually a TS trick
+const internal = Symbol("internal");
+export type Key<T, P extends Paths<T>, R> = { [internal]: [T, P, R] }; // This is actually a TS trick
 // the path is going to be just the string. But if we prevent TS from understanding it as a string
 // then we can infer the original `T` from that path, so that we can later on work with it
 export function createKeyFn<T>() {
-  return <P extends Paths<T>>(path: P): Key<T, P> => path;
+  return <P extends Paths<T>>(path: P): Key<T, P, ValueOfPath<T, P>> =>
+    path as any;
 }
 
+/// PROXY ///
+const PATH_RESULT = Symbol("path");
+
+const getProxyHandler = (): ProxyHandler<{ path: string }> => {
+  const handler: ProxyHandler<{ path: string }> = {
+    get: (target, prop, receiver) => {
+      if (prop === PATH_RESULT) {
+        return target.path;
+      }
+      if (typeof prop === "symbol") {
+        throw new Error(`Can't serialize symbols to keys`);
+      }
+      const newPath =
+        typeof prop === "number" || !isNaN(prop as any)
+          ? `${target.path}[${prop}]`
+          : target.path.length
+          ? `${target.path}.${prop}`
+          : prop;
+
+      if (target.path.length === 0)
+        return new Proxy(
+          {
+            path: newPath,
+          },
+          handler
+        );
+      target.path = newPath;
+
+      return receiver;
+    },
+  };
+  return handler;
+};
+
+export type KeySelector<TValues, T> = (values: TValues) => T;
+export type KeysSelector<TValues, R extends ReadonlyArray<any>> = (
+  values: TValues
+) => R;
+
+// interface Foo {
+//   bar: string;
+//   baz?: { bob: number };
+// }
+
+// declare function useInputExplicit<
+//   T,
+//   P extends Paths<T>,
+//   R extends ValueOfPath<T, P>
+// >(foo: T, path: P, validator: (value: R) => boolean): R;
+// declare function useInputExplicit<T, R>(
+//   foo: T,
+//   keySelector: KeySelector<T, R>,
+//   validator: (value: R) => boolean
+// ): R;
+// const r = useInputExplicit(
+//   null as any as Foo,
+//   (v) => v.baz!.bob,
+//   (v: number | null) => true
+// );
+
+// declare function useInputImplicit<T>(
+//   path: string,
+//   validator?: (value: T) => boolean
+// ): T;
+// declare function useInputImplicit<T, R>(
+//   path: Key<T, Paths<T>, R>,
+//   validator: (value: R) => boolean
+// ): R;
+// declare function useInputImplicit<T, R>(
+//   keySelector: KeySelector<T, R>,
+//   validator: (value: R) => boolean
+// ): R;
+// const kf = createKeyFn<Foo>();
+// const r2 = useInputImplicit(kf("baz.bob"), (v) => true);
+
+// declare function useValuesExplicit<T, P extends Paths<T>[]>(
+//   foo: T,
+//   ...paths: P
+// ): { [K in keyof P]: ValueOfPath<T, P[K]> };
+// declare function useValuesExplicit<T, R extends ReadonlyArray<any>>(
+//   foo: T,
+//   keySelectors: KeysSelector<T, R>
+// ): R;
+// const r3 = useValuesExplicit(null as any as Foo, "bar", "baz.bob");
+// const r4 = useValuesExplicit(null as any as Foo, (v) => [v.bar, v.baz?.bob]);
+
+// declare function useValuesImplicit(
+//   ...paths: string[]
+// ): any[];
+// declare function useValuesImplicit<P extends Key<any, any, any>[]>(
+//   ...keys: P
+// ): { [K in keyof P]: P[K] extends Key<any, any, infer R> ? R : unknown };
+// declare function useValuesImplicit<T, R extends ReadonlyArray<any>>(
+//   keySelectors: KeysSelector<T, R>
+// ): R;
+// const r5 = useValuesImplicit("bar", "baz.bob");
+// const r6 = useValuesImplicit(kf('bar'), kf('baz.bob'));
+// const r7 = useValuesImplicit((v: Foo) => [v.bar, v.baz!.bob] as const);
+
+export const getKey = (keySelector: KeySelector<any, any>): string => {
+  if (typeof keySelector === "string") return keySelector;
+  const proxy = new Proxy({ path: "" }, getProxyHandler());
+  const result = keySelector(proxy);
+  if (!(PATH_RESULT in result)) {
+    throw new Error(
+      `You must return a value from the argument in the selector function`
+    );
+  }
+  return result[PATH_RESULT];
+};
+export const getKeys = (keysSelector: KeysSelector<any, any[]>): string[] => {
+  if (typeof keysSelector === "object") return keysSelector;
+  const proxy = new Proxy({ path: "" }, getProxyHandler());
+  const result = keysSelector(proxy);
+  if (result.some((r) => !(PATH_RESULT in r))) {
+    throw new Error(
+      `You must return a value from the argument in the selector function`
+    );
+  }
+  return result.map((r) => r[PATH_RESULT]);
+};
+
+/// UTILS ///
 export const getMapValue = (key: string, map: Map<string, State<any>>) => {
   if (!map.has(key)) {
     map.set(key, new State<any>());
