@@ -7,6 +7,10 @@ export {
   setInitialValue,
   setFormInitialValue,
 } from "./commands/setInitialValue";
+export {
+  getInitialValue,
+  getFormInitialValue,
+} from "./commands/getInitialValue";
 export { touchFields } from "./commands/touchFields";
 export { setFieldError } from "./commands/setFieldError";
 export * from "./hooks";

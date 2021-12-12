@@ -40,7 +40,6 @@
 
 ## TODO
 
-- getInitialValue
 - getAllErrors
 - investigate arrays
 - add test to verify initialValue on useForm prevails over initialValue on useInput
