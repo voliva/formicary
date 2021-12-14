@@ -17,7 +17,9 @@ type Errors<T extends string> = {
 
 /// With formRef ///
 // no keys
-export function useErrors<TValues>(formRef: FormRef<TValues>): Errors<string>;
+export function useErrors<TValues>(
+  formRef: FormRef<TValues>
+): Partial<Errors<Paths<TValues>>>;
 
 // string path
 export function useErrors<TValues, P extends Paths<TValues>[]>(
