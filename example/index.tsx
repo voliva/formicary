@@ -50,29 +50,29 @@ const Form = () => {
   });
 
   const control = useControl(form, {
-    key: "subcontrol",
+    key: (v) => v.subcontrol,
     initialValue: {
       foo: "asdf",
       bar: "haha",
     },
   });
 
-  const control2 = useControl({
-    key: key("subcontrol"),
-    initialValue: undefined,
-  });
+  // const control2 = useControl({
+  //   key: key("subcontrol"),
+  //   initialValue: undefined,
+  // });
 
   const ref = useInput(form, "subcontrol", {
     initialValue: true,
   });
 
-  const ref2 = useInput(key("subcontrol"), {
-    initialValue: true,
-  });
+  // const ref2 = useInput(key("subcontrol"), {
+  //   initialValue: true,
+  // });
 
-  const ref3 = useInput("subcontrol", {
-    initialValue: true,
-  });
+  // const ref3 = useInput("subcontrol", {
+  //   initialValue: true,
+  // });
 
   const errors = useErrors(form);
   const minField = useInput(form, "min", {
@@ -84,8 +84,8 @@ const Form = () => {
     validator: pipeValidators(isRequired(), isNumber()),
   });
 
-  const min = useFieldValue(form, "subcontrol");
-  // const min2 = useFieldValue(key("min"));
+  const min = useFieldValue(form, "min");
+  // const min2 = useFieldValue(key("subcontrol"));
   const pristine = useIsPristine(form);
   const isValid = useIsValid(form);
 
@@ -140,59 +140,59 @@ const App = () => {
 
 ReactDOM.render(<App />, document.getElementById("root"));
 
-enum E1 {
-  e10 = "e10", // Doesn't work if number only...
-  e20 = "e20",
-}
+// enum E1 {
+//   e10 = "e10", // Doesn't work if number only...
+//   e20 = "e20",
+// }
 
-type T1 = Record<E1, boolean>;
-interface T2 {
-  t20: string;
-  t21: boolean;
-  t23: Array<number>;
-}
-type T3 = T1 & Omit<T2, "t23">;
+// type T1 = Record<E1, boolean>;
+// interface T2 {
+//   t20: string;
+//   t21: boolean;
+//   t23: Array<number>;
+// }
+// type T3 = T1 & Omit<T2, "t23">;
 
-type _ = typeof E1.e10 extends keyof T3 ? true : false;
+// type _ = typeof E1.e10 extends keyof T3 ? true : false;
 
-const form = useForm({
-  initialValue: {} as T3,
-});
+// const form = useForm({
+//   initialValue: {} as T3,
+// });
 
-function whatever(v: E1) {
-  const result = useControl(form, {
-    key: v,
-    initialValue: true,
-  });
-}
+// function whatever(v: E1) {
+//   const result = useControl(form, {
+//     key: v,
+//     initialValue: true,
+//   });
+// }
 
-/****/
+// /****/
 
-function foo<T>(form: FormRef<T>, key: keyof T & string) {
-  const input = useInput(form, key);
-}
+// function foo<T>(form: FormRef<T>, key: keyof T & string) {
+//   const input = useInput(form, key);
+// }
 
-/****/
+// /****/
 
-const formA = useForm<{ name: string; age: number }>();
-const formB: FormRef<{ name: string }> = formA; // Error
+// const formA = useForm<{ name: string; age: number }>();
+// const formB: FormRef<{ name: string }> = formA; // Error
 
-/*****/
+// /*****/
 
-const formC = useForm<any>();
-useErrors(formC, "name"); // Error
+// const formC = useForm<any>();
+// useErrors(formC, "name"); // Error
 
-/*****/
+// /*****/
 
-const formD = useForm<{ foo: boolean; bar: number }>();
+// const formD = useForm<{ foo: boolean; bar: number }>();
 
-const inputRef = useInput(formD, "bar", {
-  validator: (value: number) => true, // Error?? happening on alpha
-});
+// const inputRef = useInput(formD, "bar", {
+//   validator: (value: number) => true, // Error?? happening on alpha
+// });
 
-/****/
+// /****/
 
-const { setValue, value, touch } = useControl(formD, {
-  initialValue: undefined, // Error: Used   work, not anymore. What's the policy on undefined values?
-  key: "bar",
-});
+// const { setValue, value, touch } = useControl(formD, {
+//   initialValue: undefined, // Error: Used   work, not anymore. What's the policy on undefined values?
+//   key: "bar",
+// });

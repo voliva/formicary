@@ -138,7 +138,7 @@ export const getKey = (
   if (typeof keySelector === "string") return keySelector;
   const proxy = new Proxy({ path: "" }, getProxyHandler());
   const result = (keySelector as KeySelector<any, any>)(proxy);
-  if (!(PATH_RESULT in result)) {
+  if (!result[PATH_RESULT]) {
     throw new Error(
       `You must return a value from the argument in the selector function`
     );
@@ -162,7 +162,7 @@ export const getKeys = (
   if (typeof keysSelector === "object") return keysSelector as string[];
   const proxy = new Proxy({ path: "" }, getProxyHandler());
   const result = keysSelector(proxy);
-  if (result.some((r) => !(PATH_RESULT in r))) {
+  if (result.some((r) => !r[PATH_RESULT])) {
     throw new Error(
       `You must return a value from the argument in the selector function`
     );
