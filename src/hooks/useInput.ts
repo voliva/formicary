@@ -57,8 +57,7 @@ export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
   >(args);
   const { eventType = "input", elementProp = "value" } = options;
 
-  const control = useControlStateless(formRef, {
-    key: keySelector,
+  const control = useControlStateless(formRef, keySelector, {
     initialValue: (options.initialValue as any) ?? "",
     validator: options.validator,
   });
@@ -107,7 +106,8 @@ export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
       element.removeEventListener(eventType, valueListener);
     };
     activeListener.current = {
-      element, cleanup
+      element,
+      cleanup,
     };
   };
 

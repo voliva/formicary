@@ -5,8 +5,7 @@ import { useHookParams } from "../internal/useHookParams";
 import { Validator } from "../validators";
 import { ControlStateless, useControlStateless } from "./useControlStateless";
 
-export interface ControlHookOptions<K, TValues, T> {
-  key: K;
+export interface ControlHookOptions<TValues, T> {
   initialValue?: T;
   validator?: Validator<T, TValues>;
 }
@@ -23,39 +22,46 @@ export function useControl<
   V extends ValueOfPath<TValues, P>
 >(
   formRef: FormRef<TValues>,
-  options: ControlHookOptions<P, TValues, V>
+  key: P,
+  options?: ControlHookOptions<TValues, V>
 ): Control<V>;
 
 // key selector
 export function useControl<TValues, V>(
   formRef: FormRef<TValues>,
-  options: ControlHookOptions<KeySelector<TValues, V>, TValues, V>
+  key: KeySelector<TValues, V>,
+  options?: ControlHookOptions<TValues, V>
 ): Control<V>;
 
 /// Without formRef ///
 // untyped string
 export function useControl<TValues, T>(
-  options: ControlHookOptions<string, TValues, T>
+  key: string,
+  options?: ControlHookOptions<TValues, T>
 ): Control<T>;
 
 // string path through keyFn
 export function useControl<TValues, T>(
-  options: ControlHookOptions<Key<any, any, T>, TValues, T>
+  key: Key<any, any, T>,
+  options?: ControlHookOptions<TValues, T>
 ): Control<T>;
 
 // key selector
 export function useControl<TValues, T>(
-  options: ControlHookOptions<KeySelector<TValues, T>, TValues, T>
+  key: KeySelector<TValues, T>,
+  options?: ControlHookOptions<TValues, T>
 ): Control<T>;
 
 export function useControl<TValues, P extends Paths<TValues>>(
   ...args: any[]
 ): Control<ValueOfPath<TValues, P>> {
-  const [formRef, options] = useHookParams<
+  const [formRef, key, options] = useHookParams<
     TValues,
-    [ControlHookOptions<any, TValues, ValueOfPath<TValues, P>>]
+    [any, ControlHookOptions<TValues, ValueOfPath<TValues, P>> | undefined]
   >(args);
-  const { subscribe, ...control } = useControlStateless(formRef, options);
+  const { subscribe, ...control } = useControlStateless(formRef, key, {
+    ...options,
+  });
   const [state, setState] = useState<ValueOfPath<TValues, P> | undefined>(
     control.getValue
   );

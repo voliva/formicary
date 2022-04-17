@@ -24,19 +24,19 @@ const Form = () => {
   }>();
   const errors = useErrors(form);
 
-  const minRef = useInput(form, {
+  const minRef = useInput(form, 'min', {
     initialValue: 0,
     validator: pipeValidators(isRequired, isNumber, isAtMost('max')),
   });
-  const maxRef = useInput(form, {
+  const maxRef = useInput(form, 'max', {
     initialValue: 0,
     validator: pipeValidators(isRequired, isNumber),
   });
 
   return (
     <div>
-      <input name="min" placeholder="min" ref={minRef} />
-      <input name="max" placeholder="max" ref={maxRef} />
+      <input placeholder="min" ref={minRef} />
+      <input placeholder="max" ref={maxRef} />
       <div>{Object.keys(errors).join(' ')}</div>
     </div>
   );
@@ -137,22 +137,21 @@ Some of the utilities takes in an array of keys instead. In those cases, this ca
 #### useInput
 
 ```tsx
-const inputRef = useInput(form, {
-  key?: KeySelector<TValues, T>;
+const inputRef = useInput(form, key, {
   initialValue?: string | boolean;
   validator?: Validator<T, TValues>;
   elementProp?: string;
   eventType?: 'input' | 'onChange';
 })
 
-<input name="quantity" ref={inputRef} />
+<input ref={inputRef} />
 ```
 
 Registers an input, and returns a ref to be passed into an `input`-like element: It will add the required event listeners and synchronize the model with its value.
 
-All parameters are optional:
+Parameters:
 
-- `key`: model key to bind this input to. If omitted, it will grab the key from the element's `.name` property.
+- `key`: [Mandatory] model key to bind this input to.
 - `initialValue`: Initial value to set to this field. Defaults to `''`.
 - `validator`: optional validator to use for this input.
 - `elementProp`: element's value property. Defaults to `value` but can be set to `checked` for checkboxes.
@@ -165,9 +164,8 @@ const {
   setValue: (value: T) => void,
   subscribe: (cb: (value: T) => void) => () => void,
   touch: () => void,
-} = useControl(form, {
-  key: KeySelector;
-  initialValue: T;
+} = useControl(form, key, {
+  initialValue?: T;
   validator?: Validator<T>;
 })
 ```

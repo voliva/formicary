@@ -11,8 +11,7 @@ import {
 import { useHookParams } from "../internal/useHookParams";
 import { Validator } from "../validators";
 
-export interface ControlStatelessOptions<K, TValues, T> {
-  key: K;
+export interface ControlStatelessOptions<TValues, T> {
   initialValue?: T;
   validator?: Validator<T, TValues>;
 }
@@ -32,39 +31,44 @@ export function useControlStateless<
   V extends ValueOfPath<TValues, P>
 >(
   formRef: FormRef<TValues>,
-  options: ControlStatelessOptions<P, TValues, V>
+  key: P,
+  options?: ControlStatelessOptions<TValues, V>
 ): ControlStateless<V>;
 
 // key selector
 export function useControlStateless<TValues, V>(
   formRef: FormRef<TValues>,
-  options: ControlStatelessOptions<KeySelector<TValues, V>, TValues, V>
+  key: KeySelector<TValues, V>,
+  options?: ControlStatelessOptions<TValues, V>
 ): ControlStateless<V>;
 
 /// Without formRef ///
 // untyped string
 export function useControlStateless<TValues, T>(
-  options: ControlStatelessOptions<string, TValues, T>
+  key: string,
+  options?: ControlStatelessOptions<TValues, T>
 ): ControlStateless<T>;
 
 // string path through keyFn
 export function useControlStateless<TValues, T>(
-  options: ControlStatelessOptions<Key<any, any, T>, TValues, T>
+  key: Key<any, any, T>,
+  options?: ControlStatelessOptions<TValues, T>
 ): ControlStateless<T>;
 
 // key selector
 export function useControlStateless<TValues, T>(
-  options: ControlStatelessOptions<KeySelector<TValues, T>, TValues, T>
+  key: KeySelector<TValues, T>,
+  options?: ControlStatelessOptions<TValues, T>
 ): ControlStateless<T>;
 
 export function useControlStateless<TValues, T>(
   ...args: any[]
 ): ControlStateless<T> {
-  const [formRef, options] = useHookParams<
+  const [formRef, keySelector, options = {}] = useHookParams<
     TValues,
-    [ControlStatelessOptions<any, TValues, T>]
+    [any, ControlStatelessOptions<TValues, T> | undefined]
   >(args);
-  const key = getKey(options.key);
+  const key = getKey(keySelector);
 
   useEffect(() => {
     formRef.registerControl({
