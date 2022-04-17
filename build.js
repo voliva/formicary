@@ -4,7 +4,9 @@ const fs = require('fs');
 const fsP = require('fs/promises');
 const path = require('path');
 
-fs.rmSync('./dist', { recursive: true })
+if(fs.existsSync('./dist')) {
+  fs.rmSync('./dist', { recursive: true })
+}
 
 function buildSource(options) {
   return esbuild.build({
