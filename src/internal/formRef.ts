@@ -158,9 +158,12 @@ const createError$ = <T>(params: {
     const dependenciesObserved = new Set<StateObservable<any>>();
 
     let latestValidator: Validator<T> | typeof EMPTY = EMPTY;
-    validator$.subscribe((v) => (latestValidator = v));
-
     let latestValue: T | typeof EMPTY = EMPTY;
+    validator$.subscribe((v) => {
+      latestValidator = v;
+      if (latestValue !== EMPTY) runValidator();
+    });
+
     value$.subscribe((v) => {
       latestValue = v;
       runValidator();
@@ -171,7 +174,7 @@ const createError$ = <T>(params: {
         throw new Error("No validator defined"); // TODO shouldn't ever happen
       }
       if (latestValue === EMPTY) {
-        throw new Error("No validator defined"); // TODO shouldn't ever happen
+        throw new Error("No value defined"); // TODO shouldn't ever happen
       }
       try {
         const result = latestValidator(latestValue, (key) => {
