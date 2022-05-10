@@ -232,7 +232,14 @@ const createError$ = <T>(params: {
   });
 
   const errors = combine({
-    validatorResult: validationError$,
+    validatorResult: validationError$.pipe(
+      distinctUntilChanged((a, b) => {
+        if (Array.isArray(a) && Array.isArray(b)) {
+          return a.length === b.length && a.every((v, i) => b[i] === v);
+        }
+        return a === b;
+      })
+    ),
     manualResult: manualError$,
   });
 
