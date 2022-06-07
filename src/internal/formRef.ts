@@ -28,10 +28,20 @@ export { FormRef as FakeFormRef } from "./formRef.fake-type";
 export const createFormRef = <
   TValues extends Record<string, any> = Record<string, any>
 >(
-  options: {
-    initialValue?: TValues;
-  } = {}
+  options: FormRefOptions<TValues> = {}
 ): FormRef<TValues> => {
+  const touchedBehavior = options.touchedBehavior ?? "auto";
+  const defaultTouched = (() => {
+    switch (touchedBehavior) {
+      case "auto":
+        return Boolean(options.initialValue);
+      case "always":
+        return true;
+      case "never":
+        return false;
+    }
+  })();
+
   const initialValues = new Map<Paths<TValues>, State<any>>();
   Object.entries(getKeyValues(options.initialValue || {})).forEach(
     ([key, value]) => {
@@ -67,7 +77,7 @@ export const createFormRef = <
       registeredKeys.setValue(keys);
       const manualError = new Stateless<ErrorResult>();
       control$.setValue({
-        touched: false,
+        touched: defaultTouched,
         validator,
         manualError,
         error$: createError$({
@@ -106,6 +116,7 @@ export const createFormRef = <
   };
 
   return {
+    defaultTouched,
     registeredKeys,
     registerControl,
     initialValues,

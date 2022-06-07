@@ -9,6 +9,7 @@ export interface ControlOptions<TValues, T> {
 }
 
 export interface FormRef<TValues extends Record<string, any>> {
+  defaultTouched: boolean;
   registeredKeys: State<Set<Paths<TValues>>>;
   registerControl: (options: ControlOptions<TValues, any>) => void;
   initialValues: Map<string, State<any>>;
@@ -19,6 +20,7 @@ export interface FormRef<TValues extends Record<string, any>> {
 
 export interface FormRefOptions<TValue> {
   initialValue?: TValue;
+  touchedBehavior?: "auto" | "always" | "never";
 }
 
 export type ErrorResult = string[] | "pending" | false;

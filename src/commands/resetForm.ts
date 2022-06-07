@@ -16,7 +16,7 @@ export const resetForm = <T>(formRef: FormRef<T>, keys?: Paths<T>[]): void => {
     if (controlValue.touched) {
       control.setValue({
         ...controlValue,
-        touched: false,
+        touched: formRef.defaultTouched,
       });
     }
   });
