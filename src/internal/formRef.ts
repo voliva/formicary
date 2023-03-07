@@ -115,10 +115,35 @@ export const createFormRef = <
     }
   };
 
+  const unregisterControl = (key: string) => {
+    if (controlStates.has(key)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const control$ = controlStates.get(key)!;
+      if (control$.hasValue()) {
+        const control = control$.getValue();
+        control.error$.close();
+      }
+      control$.close();
+      controlStates.delete(key);
+    }
+
+    if (values.has(key)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const value$ = values.get(key)!;
+      value$.close();
+      values.delete(key);
+    }
+
+    const keys = registeredKeys.getValue();
+    keys.delete(key);
+    registeredKeys.setValue(keys);
+  };
+
   return {
     defaultTouched,
     registeredKeys,
     registerControl,
+    unregisterControl,
     initialValues,
     controlStates,
     values,

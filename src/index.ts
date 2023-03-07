@@ -14,6 +14,7 @@ export {
 } from "./commands/getInitialValue";
 export { touchFields } from "./commands/touchFields";
 export { setFieldError } from "./commands/setFieldError";
+export { unregisterControl } from "./commands/unregisterControl";
 export * from "./hooks";
 export * from "./validators";
 export * from "./context";

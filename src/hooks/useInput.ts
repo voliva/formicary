@@ -10,6 +10,7 @@ export type InputOptions<TValues, V> = {
   eventType?: "input" | "onChange";
   validator?: Validator<V, TValues>;
   initialValue?: string | boolean;
+  unregisterOnUnmount?: boolean;
 };
 
 /// With formRef ///
@@ -60,6 +61,7 @@ export function useInput<TValues, P extends Paths<TValues>>(...args: any[]) {
   const control = useControlStateless(formRef, keySelector, {
     initialValue: (options.initialValue as any) ?? "",
     validator: options.validator,
+    unregisterOnUnmount: options.unregisterOnUnmount,
   });
 
   const activeListener = useRef<{

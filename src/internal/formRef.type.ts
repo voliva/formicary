@@ -8,10 +8,11 @@ export interface ControlOptions<TValues, T> {
   validator?: Validator<T, TValues>;
 }
 
-export interface FormRef<TValues extends Record<string, any>> {
+export interface FormRef<TValues> {
   defaultTouched: boolean;
   registeredKeys: State<Set<Paths<TValues>>>;
   registerControl: (options: ControlOptions<TValues, any>) => void;
+  unregisterControl: (key: string) => void;
   initialValues: Map<string, State<any>>;
   values: Map<string, State<any>>;
   controlStates: Map<string, State<ControlState<any>>>;

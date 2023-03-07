@@ -14,6 +14,7 @@ import { Validator } from "../validators";
 export interface ControlStatelessOptions<TValues, T> {
   initialValue?: T;
   validator?: Validator<T, TValues>;
+  unregisterOnUnmount?: boolean;
 }
 
 export interface ControlStateless<T> {
@@ -77,6 +78,15 @@ export function useControlStateless<TValues, T>(
       validator: options.validator,
     });
   }, [formRef, options]);
+
+  useEffect(
+    () => () => {
+      if (options.unregisterOnUnmount) {
+        formRef.unregisterControl(key);
+      }
+    },
+    []
+  );
 
   return {
     getValue: () => {

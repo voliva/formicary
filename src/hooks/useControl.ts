@@ -8,6 +8,7 @@ import { ControlStateless, useControlStateless } from "./useControlStateless";
 export interface ControlHookOptions<TValues, T> {
   initialValue?: T;
   validator?: Validator<T, TValues>;
+  unregisterOnUnmount?: boolean;
 }
 
 export type Control<T> = Omit<ControlStateless<T>, "subscribe"> & {
