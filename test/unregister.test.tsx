@@ -95,4 +95,16 @@ describe("unregister", () => {
 
     expect(getByTestId("pristine")).toHaveTextContent("yes");
   });
+
+  it("doesn't crash when unmounting the parent component", () => {
+    const { getByTestId, unmount } = render(<Form withMin />);
+
+    expect(getByTestId("pristine")).toHaveTextContent("yes");
+
+    const spy = jest.spyOn(console, "error");
+
+    unmount();
+
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

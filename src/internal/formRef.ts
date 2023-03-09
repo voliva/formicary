@@ -134,9 +134,11 @@ export const createFormRef = <
       values.delete(key);
     }
 
-    const keys = registeredKeys.getValue();
-    keys.delete(key);
-    registeredKeys.setValue(keys);
+    if (!registeredKeys.closed) {
+      const keys = registeredKeys.getValue();
+      keys.delete(key);
+      registeredKeys.setValue(keys);
+    }
   };
 
   return {
