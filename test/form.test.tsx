@@ -36,14 +36,22 @@ const Form = () => {
 
 describe("useForm", () => {
   it("starts with default values", () => {
-    const { getByPlaceholderText } = render(<Form />);
+    const { getByPlaceholderText } = render(
+      <React.StrictMode>
+        <Form />
+      </React.StrictMode>
+    );
 
     expect(getByPlaceholderText("min")).toHaveValue("0");
     expect(getByPlaceholderText("max")).toHaveValue("10");
   });
 
   it("validates fields by their own", async () => {
-    const { getByPlaceholderText, getByTestId } = render(<Form />);
+    const { getByPlaceholderText, getByTestId } = render(
+      <React.StrictMode>
+        <Form />
+      </React.StrictMode>
+    );
 
     expect(getByTestId("errors")).toHaveTextContent("");
     await userEvent.type(getByPlaceholderText("min"), "12");
@@ -53,7 +61,11 @@ describe("useForm", () => {
   });
 
   it("refreshes validation on fields that depend on it", async () => {
-    const { getByPlaceholderText, getByTestId } = render(<Form />);
+    const { getByPlaceholderText, getByTestId } = render(
+      <React.StrictMode>
+        <Form />
+      </React.StrictMode>
+    );
 
     expect(getByTestId("errors")).toHaveTextContent("");
     await userEvent.type(getByPlaceholderText("min"), "12");

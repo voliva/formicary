@@ -69,6 +69,10 @@ export const createFormRef = <
     key,
     validator = noopValidator,
   }: ControlOptions<TValues, any>) => {
+    if (registeredKeys.closed) {
+      return;
+    }
+
     const value$ = getControlValue$(key);
     const control$: State<ControlState<any>> = getMapValue(key, controlStates);
     if (!control$.hasValue()) {
