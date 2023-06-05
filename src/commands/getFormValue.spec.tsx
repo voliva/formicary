@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react";
-import { renderHook } from "@testing-library/react-hooks";
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { render, renderHook } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { useForm } from "../hooks/useForm";
@@ -42,18 +42,18 @@ describe("readForm", () => {
     hookResult.unmount();
   });
 
-  it("returns the nested value of the form", () => {
+  it("returns the nested value of the form", async () => {
     const onSubmit = jest.fn();
     const { container } = render(<Form onSubmit={onSubmit} />);
-    userEvent.type(
+    await userEvent.type(
       container.querySelector('input[name="value"]')!,
       "shallowValue"
     );
-    userEvent.type(
+    await userEvent.type(
       container.querySelector('input[name="nested.value"]')!,
       "nestedValue"
     );
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
 
     expect(onSubmit).toHaveBeenCalledWith({
       value: "shallowValue",
@@ -63,7 +63,7 @@ describe("readForm", () => {
     });
   });
 
-  it("doesn't change the value once read", () => {
+  it("doesn't change the value once read", async () => {
     const onSubmit = jest.fn<
       void,
       [{ value: string; nested: { value: string } }]
@@ -79,24 +79,24 @@ describe("readForm", () => {
         }}
       />
     );
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     const [result] = onSubmit.mock.calls[0];
 
-    userEvent.type(
+    await userEvent.type(
       container.querySelector('input[name="value"]')!,
       "shallowValue"
     );
-    userEvent.type(
+    await userEvent.type(
       container.querySelector('input[name="nested.value"]')!,
       "nestedValue"
     );
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
 
     expect(result.value).toBe("initial0");
     expect(result.nested.value).toBe("initial1");
   });
 
-  it("returns all fields, even if they're invalid", () => {
+  it("returns all fields, even if they're invalid", async () => {
     const onSubmit = jest.fn<
       void,
       [{ value: string; nested: { value: string } }]
@@ -111,7 +111,7 @@ describe("readForm", () => {
       />
     );
 
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     const [result] = onSubmit.mock.calls[0];
     expect(result).toEqual({
       value: "will this value work?",

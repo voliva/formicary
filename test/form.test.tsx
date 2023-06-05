@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/extend-expect";
-import { act, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { isNumber, pipeValidators, useErrors, useForm, useInput } from "../src";
@@ -46,11 +46,8 @@ describe("useForm", () => {
     const { getByPlaceholderText, getByTestId } = render(<Form />);
 
     expect(getByTestId("errors")).toHaveTextContent("");
-    userEvent.type(getByPlaceholderText("min"), "12");
-    userEvent.tab();
-
-    // Wait for error to propagate
-    await act(async () => {});
+    await userEvent.type(getByPlaceholderText("min"), "12");
+    await userEvent.tab();
 
     expect(getByTestId("errors")).toHaveTextContent("min");
   });
@@ -59,14 +56,11 @@ describe("useForm", () => {
     const { getByPlaceholderText, getByTestId } = render(<Form />);
 
     expect(getByTestId("errors")).toHaveTextContent("");
-    userEvent.type(getByPlaceholderText("min"), "12");
-    userEvent.tab();
-
-    // Wait for error to propagate
-    await act(async () => {});
+    await userEvent.type(getByPlaceholderText("min"), "12");
+    await userEvent.tab();
 
     expect(getByTestId("errors")).toHaveTextContent("min");
-    userEvent.type(getByPlaceholderText("max"), "15");
+    await userEvent.type(getByPlaceholderText("max"), "15");
     expect(getByTestId("errors")).toHaveTextContent("");
   });
 });

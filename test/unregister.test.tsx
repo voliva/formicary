@@ -58,18 +58,12 @@ describe("unregister", () => {
 
     expect(getByTestId("errors")).toHaveTextContent("");
 
-    userEvent.type(getByPlaceholderText("min"), "12");
-    userEvent.tab();
-
-    // Wait for error to propagate
-    await act(async () => {});
+    await userEvent.type(getByPlaceholderText("min"), "12");
+    await userEvent.tab();
 
     expect(getByTestId("errors")).toHaveTextContent("min");
 
     rerender(<Form withMin={false} />);
-
-    // Wait for error to propagate
-    await act(async () => {});
 
     expect(getByTestId("errors")).toHaveTextContent("");
   });
@@ -81,17 +75,12 @@ describe("unregister", () => {
 
     expect(getByTestId("pristine")).toHaveTextContent("yes");
 
-    userEvent.type(getByPlaceholderText("min"), "5");
-    userEvent.tab();
-
-    await act(async () => {});
+    await userEvent.type(getByPlaceholderText("min"), "5");
+    await userEvent.tab();
 
     expect(getByTestId("pristine")).toHaveTextContent("no");
 
     rerender(<Form withMin={false} />);
-
-    // Wait for error to propagate
-    await act(async () => {});
 
     expect(getByTestId("pristine")).toHaveTextContent("yes");
   });

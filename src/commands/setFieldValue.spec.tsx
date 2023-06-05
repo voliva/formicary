@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -65,10 +66,10 @@ const Form = ({ onSubmit, initialValue, validator }: any) => {
 };
 
 describe("setFieldValue", () => {
-  it("sets the value of individual fields", () => {
+  it("sets the value of individual fields", async () => {
     const onSubmit = jest.fn();
     const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
         value: "",
@@ -76,8 +77,8 @@ describe("setFieldValue", () => {
       value: "",
     });
 
-    userEvent.click(getByTestId("setFieldValue"));
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(getByTestId("setFieldValue"));
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
         value: "",
@@ -86,11 +87,11 @@ describe("setFieldValue", () => {
     });
   });
 
-  it("sets the value of multiple fields", () => {
+  it("sets the value of multiple fields", async () => {
     const onSubmit = jest.fn();
     const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
-    userEvent.click(getByTestId("setMultiple"));
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(getByTestId("setMultiple"));
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
         value: "multiple set 0",
@@ -99,15 +100,15 @@ describe("setFieldValue", () => {
     });
   });
 
-  it("ignores fields not explicitely passed in", () => {
+  it("ignores fields not explicitely passed in", async () => {
     const onSubmit = jest.fn();
     const { container, getByTestId } = render(<Form onSubmit={onSubmit} />);
-    userEvent.click(getByTestId("setMultipleIgnore"));
-    userEvent.type(
+    await userEvent.click(getByTestId("setMultipleIgnore"));
+    await userEvent.type(
       container.querySelector('input[name="value"]')!,
       "typed in value"
     );
-    userEvent.click(container.querySelector('input[type="submit"]')!);
+    await userEvent.click(container.querySelector('input[type="submit"]')!);
     expect(onSubmit).toHaveBeenCalledWith({
       nested: {
         value: "ignoring some",
