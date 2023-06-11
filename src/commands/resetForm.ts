@@ -6,12 +6,13 @@ export const resetForm = <T>(formRef: FormRef<T>, keys?: Paths<T>[]): void => {
 
   const allKeys = keys ?? (Array.from(values.keys()) as Paths<T>[]);
   allKeys.forEach((key) => {
-    if (!values.has(key) || !initialValues.has(key)) {
+    if (!values.has(key) || !initialValues.get(key)?.hasValue()) {
       return;
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     values.get(key)!.setValue(initialValues.get(key)!.getValue());
     const control = getControlState(formRef, key);
+    if (!control.hasValue()) return;
     const controlValue = control.getValue();
     if (controlValue.touched) {
       control.setValue({

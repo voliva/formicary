@@ -67,7 +67,7 @@ export function useControl<TValues, P extends Paths<TValues>>(
     control.getValue
   );
 
-  useEffect(() => subscribe(setState), []);
+  useEffect(() => subscribe(setState), [subscribe]);
 
   return {
     ...control,

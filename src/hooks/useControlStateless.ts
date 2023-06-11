@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { FormRef, getControlState } from "../internal/formRef";
 import {
   getKey,
@@ -95,8 +95,11 @@ export function useControlStateless<TValues, T>(
     },
     setValue: (value: T | undefined) =>
       getMapValue(key, formRef.values).setValue(value),
-    subscribe: (cb: (value: T | undefined) => void) =>
-      getMapValue(key, formRef.values).subscribe(cb),
+    subscribe: useCallback(
+      (cb: (value: T | undefined) => void) =>
+        getMapValue(key, formRef.values).subscribe(cb),
+      [formRef]
+    ),
     touch: () => {
       const state$ = getControlState(formRef, key as Paths<TValues>);
       state$.value.then(
